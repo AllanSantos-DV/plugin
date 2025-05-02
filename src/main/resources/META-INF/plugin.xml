@@ -2,7 +2,7 @@
     <idea-version since-build="213.0" until-build="213.*"/>
     <id>com.plugin.gitmultimerge</id>
     <name>Git Multi Merge</name>
-    <vendor email="allannascimentodossantos@gmail.com" url="https://github.com/seuprojeto">Allan Santos</vendor>
+    <vendor email="allannascimentodossantos@gmail.com" url="https://github.com/AllanSantos-DV/plugin">Allan Santos</vendor>
 
     <description><![CDATA[
     Plugin para permitir o merge de uma branch source para múltiplos targets simultaneamente.
