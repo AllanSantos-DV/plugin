@@ -1,0 +1,34 @@
+<idea-plugin>
+    <idea-version since-build="213.0" until-build="213.*"/>
+    <id>com.plugin.gitmultimerge</id>
+    <name>Git Multi Merge</name>
+    <vendor email="allannascimentodossantos@gmail.com" url="https://github.com/seuprojeto">Allan Santos</vendor>
+
+    <description><![CDATA[
+    Plugin para permitir o merge de uma branch source para múltiplos targets simultaneamente.
+    
+    Características:
+    - Selecione uma branch source e até 5 branches target
+    - Opção para squash commits durante o merge
+    - Opção para deletar a branch source após o merge bem-sucedido
+    - Visualização de progresso em tempo real
+    ]]></description>
+
+    <!-- Depende do módulo da plataforma IntelliJ e do plugin Git4Idea -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends>Git4Idea</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Extensões se necessário -->
+    </extensions>
+
+    <actions>
+        <action id="GitMultiMerge.Action" 
+                class="com.plugin.gitmultimerge.GitMultiMergeAction" 
+                text="Multi Merge..." 
+                description="Merge uma branch source em múltiplos targets">
+            <add-to-group group-id="Git.Menu" anchor="after" relative-to-action="Git.Merge"/>
+            <add-to-group group-id="Git.ContextMenu" anchor="after" relative-to-action="Git.Merge"/>
+        </action>
+    </actions>
+</idea-plugin> 
