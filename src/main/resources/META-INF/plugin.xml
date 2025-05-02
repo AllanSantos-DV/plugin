@@ -1,5 +1,5 @@
 <idea-plugin>
-    <idea-version since-build="213.0" until-build="213.*"/>
+    <idea-version since-build="213.0" until-build="999.*"/>
     <id>com.plugin.gitmultimerge</id>
     <name>Git Multi Merge</name>
     <vendor email="allannascimentodossantos@gmail.com" url="https://github.com/AllanSantos-DV/plugin">Allan Santos</vendor>
