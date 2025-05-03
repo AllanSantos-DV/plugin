@@ -32,3 +32,6 @@ idea-sandbox/
 
 # Arquivos específicos do projeto
 bin/
+
+# Publicação do plugin
+PUBLISHING.md

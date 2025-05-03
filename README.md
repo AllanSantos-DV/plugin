@@ -2,6 +2,10 @@
 
 Plugin para IntelliJ IDEA que permite realizar o merge de uma branch source para múltiplas branches target simultaneamente, com opções de push automático e limpeza de branches.
 
+## Screenshots
+
+![Tela de seleção de branches](images/screenshots/branch-selection.png)
+
 ## Funcionalidades
 
 - Selecionar uma branch source e até 5 branches target para merge
@@ -88,6 +92,7 @@ Este plugin é distribuído sob a licença MIT.
 ## Contato
 
 Para dúvidas ou sugestões, entre em contato com o desenvolvedor através do e-mail: [Allan Santos](mailto:allannascimentodossantos@gmail.com)
+
 ## Exemplo de uso
 
 ```java

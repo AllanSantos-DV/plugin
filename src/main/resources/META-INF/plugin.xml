@@ -1,6 +1,7 @@
 <idea-plugin>
     <id>com.plugin.gitmultimerge</id>
     <name>Git Multi Merge</name>
+    <version>1.1.0</version>
     <vendor email="allannascimentodossantos@gmail.com" url="https://github.com/AllanSantos-DV/plugin">Allan Santos</vendor>
 
     <description><![CDATA[
