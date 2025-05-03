@@ -21,6 +21,16 @@
     ]]></description>
     
     <change-notes><![CDATA[
+    <h3>Versão 1.1.0</h3>
+    <ul>
+        <li><b>NOVO:</b> Interface aprimorada com ComboBox para seleção de branch source</li>
+        <li><b>NOVO:</b> Campo de busca para filtrar branches target em repositórios grandes</li>
+        <li><b>NOVO:</b> Seleção automática da branch atual como source padrão</li>
+        <li><b>CORRIGIDO:</b> Problema de commit automático após operação de squash</li>
+        <li><b>MELHORADO:</b> Push mais confiável após operações de merge</li>
+        <li><b>MELHORADO:</b> Exclusão automática da branch source da lista de targets</li>
+    </ul>
+    
     <h3>Versão 1.0.0</h3>
     <ul>
         <li><b>NOVO:</b> Push automático para remotes após merge bem-sucedido</li>

@@ -5,8 +5,10 @@ Plugin para IntelliJ IDEA que permite realizar o merge de uma branch source para
 ## Funcionalidades
 
 - Selecionar uma branch source e até 5 branches target para merge
+- Interface otimizada com ComboBox para branch source e campo de busca para branches target
+- Seleção automática da branch atual como source padrão
 - Push automático para remotes após merge bem-sucedido
-- Opção para squash commits durante o merge
+- Opção para squash commits durante o merge com commit automático
 - Opção para deletar branch source (local e remota) após o merge bem-sucedido
 - Atualização automática das informações do repositório com fetch e prune
 - Visualização de progresso em tempo real com feedback detalhado
@@ -35,7 +37,10 @@ Plugin para IntelliJ IDEA que permite realizar o merge de uma branch source para
 
 1. Abra um projeto com repositório Git no IntelliJ IDEA
 2. No menu "Git", selecione a opção "Multi Merge..."
-3. Selecione a branch source e as branches target (até 5)
+3. Na tela de configuração:
+   - A branch atual será pré-selecionada como source (você pode alterá-la no ComboBox)
+   - Selecione as branches target (até 5) na lista à direita
+   - Use o campo de busca para filtrar branches (útil em repositórios grandes)
 4. Configure as opções desejadas:
    - **Squash commits**: Combina todos os commits da branch source em um único commit
    - **Push para remote após o merge**: Atualiza automaticamente o repositório remoto para cada branch após o merge
@@ -50,12 +55,13 @@ Plugin para IntelliJ IDEA que permite realizar o merge de uma branch source para
 
 1. **Checkout** para cada branch target
 2. **Merge** da branch source para a branch target
-3. **Push** para o remote (se a opção estiver habilitada)
-4. **Fetch com prune** para atualizar as informações do repositório
-5. **Checkout** para uma branch segura
-6. **Deleção** da branch source local (se solicitado e todos os merges forem bem-sucedidos)
-7. **Deleção** da branch source remota (se existir, for solicitado e todos os merges forem bem-sucedidos)
-8. **Notificação** do resultado com detalhes de cada operação
+3. **Commit** automático após squash (se a opção estiver habilitada)
+4. **Push** para o remote (se a opção estiver habilitada)
+5. **Fetch com prune** para atualizar as informações do repositório
+6. **Checkout** para uma branch segura
+7. **Deleção** da branch source local (se solicitado e todos os merges forem bem-sucedidos)
+8. **Deleção** da branch source remota (se existir, for solicitado e todos os merges forem bem-sucedidos)
+9. **Notificação** do resultado com detalhes de cada operação
 
 ## Solução de problemas
 
@@ -63,6 +69,7 @@ Plugin para IntelliJ IDEA que permite realizar o merge de uma branch source para
 - Certifique-se de estar em um projeto com Git configurado
 - Em caso de erros persistentes, tente limpar o cache do IntelliJ (File > Invalidate Caches / Restart...)
 - Verifique sua conexão com o remote antes de usar as funcionalidades de push/delete remotas
+- Se as alterações não aparecerem no remote após o merge, verifique se a opção "Push para remote após o merge" está habilitada
 
 ## Limitações
 

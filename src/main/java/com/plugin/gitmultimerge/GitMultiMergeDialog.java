@@ -8,6 +8,7 @@ import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vcs.VcsException;
 import com.intellij.openapi.vcs.VcsNotifier;
+import com.intellij.ui.DocumentAdapter;
 import com.intellij.ui.components.JBCheckBox;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.JBList;
@@ -25,6 +26,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -38,18 +40,22 @@ public class GitMultiMergeDialog extends DialogWrapper {
     private final GitRepository repository;
     private final Git git;
 
-    private JBList<String> sourceBranchList;
+    private JComboBox<String> sourceBranchComboBox;
     private JBList<String> targetBranchList;
+    private JBTextField searchField;
     private JBCheckBox squashCheckBox;
     private JBCheckBox deleteSourceCheckBox;
     private JBCheckBox pushAfterMergeCheckBox;
     private JBTextField mergeCommitMessageField;
+    private DefaultListModel<String> targetListModel;
+    private List<String> allBranchNames;
 
     public GitMultiMergeDialog(@NotNull Project project, @NotNull GitRepository repository) {
         super(project);
         this.project = project;
         this.repository = repository;
         this.git = Git.getInstance();
+        this.allBranchNames = getBranchNames();
 
         setTitle("Git Multi Merge");
         init();
@@ -65,7 +71,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
         c.fill = GridBagConstraints.BOTH;
         c.insets = JBUI.insets(5);
 
-        // Lista de branches source
+        // ComboBox de branch source
         c.gridx = 0;
         c.gridy = 0;
         c.gridwidth = 1;
@@ -74,13 +80,18 @@ public class GitMultiMergeDialog extends DialogWrapper {
         panel.add(new JBLabel("Branch source:"), c);
 
         c.gridy = 1;
-        c.weighty = 1.0;
-        sourceBranchList = new JBList<>(getBranchNames().toArray(new String[0]));
-        sourceBranchList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        JBScrollPane sourceScrollPane = new JBScrollPane(sourceBranchList);
-        panel.add(sourceScrollPane, c);
+        c.weighty = 0.1;
+        sourceBranchComboBox = new JComboBox<>(allBranchNames.toArray(new String[0]));
 
-        // Lista de branches target
+        // Tentar selecionar a branch atual
+        String currentBranch = repository.getCurrentBranchName();
+        if (currentBranch != null) {
+            sourceBranchComboBox.setSelectedItem(currentBranch);
+        }
+
+        panel.add(sourceBranchComboBox, c);
+
+        // Lista de branches target com campo de busca
         c.gridx = 1;
         c.gridy = 0;
         c.weighty = 0;
@@ -88,8 +99,33 @@ public class GitMultiMergeDialog extends DialogWrapper {
 
         c.gridy = 1;
         c.weighty = 1.0;
-        targetBranchList = new JBList<>(getBranchNames().toArray(new String[0]));
+
+        // Painel para a lista de targets com campo de busca
+        JPanel targetPanel = new JPanel(new BorderLayout(0, 5));
+
+        // Campo de busca
+        searchField = new JBTextField();
+        searchField.getEmptyText().setText("Buscar branches...");
+        targetPanel.add(searchField, BorderLayout.NORTH);
+
+        // Lista de branches target
+        targetListModel = new DefaultListModel<>();
+        targetBranchList = new JBList<>(targetListModel);
         targetBranchList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+
+        // Atualizar inicialmente a lista de targets
+        updateTargetList();
+
+        // Adicionar listener para o campo de busca
+        searchField.getDocument().addDocumentListener(new DocumentAdapter() {
+            @Override
+            protected void textChanged(@NotNull DocumentEvent e) {
+                updateTargetList();
+            }
+        });
+
+        // Adicionar listener para o combobox de source
+        sourceBranchComboBox.addActionListener(e -> updateTargetList());
 
         // Limite a seleção para no máximo 5 branches target
         targetBranchList.addListSelectionListener(e -> {
@@ -100,7 +136,8 @@ public class GitMultiMergeDialog extends DialogWrapper {
         });
 
         JBScrollPane targetScrollPane = new JBScrollPane(targetBranchList);
-        panel.add(targetScrollPane, c);
+        targetPanel.add(targetScrollPane, BorderLayout.CENTER);
+        panel.add(targetPanel, c);
 
         // Opções adicionais
         JPanel optionsPanel = new JPanel(new GridLayout(4, 1, 5, 5));
@@ -135,6 +172,26 @@ public class GitMultiMergeDialog extends DialogWrapper {
     }
 
     /**
+     * Atualiza a lista de branches target com base na branch source selecionada e
+     * texto de busca.
+     */
+    private void updateTargetList() {
+        String sourceBranch = (String) sourceBranchComboBox.getSelectedItem();
+        String searchText = searchField.getText();
+
+        targetListModel.clear();
+
+        for (String branch : allBranchNames) {
+            // Não incluir a branch source na lista de targets
+            if (!branch.equals(sourceBranch) &&
+                    (searchText == null || searchText.isEmpty() ||
+                            branch.toLowerCase().contains(searchText.toLowerCase()))) {
+                targetListModel.addElement(branch);
+            }
+        }
+    }
+
+    /**
      * Obtém a lista de nomes de branches no repositório.
      */
     private List<String> getBranchNames() {
@@ -151,7 +208,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
     @Override
     protected void doOKAction() {
         // Validação de entrada
-        String sourceBranch = sourceBranchList.getSelectedValue();
+        String sourceBranch = (String) sourceBranchComboBox.getSelectedItem();
         List<String> targetBranches = targetBranchList.getSelectedValuesList();
 
         if (sourceBranch == null) {
@@ -225,7 +282,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
                 if (squash) {
                     mergeHandler.addParameters("--squash");
                 }
-                if (!mergeMessage.isEmpty()) {
+                if (!squash && !mergeMessage.isEmpty()) {
                     mergeHandler.addParameters("-m", mergeMessage);
                 }
                 mergeHandler.addParameters(sourceBranch);
@@ -245,6 +302,24 @@ public class GitMultiMergeDialog extends DialogWrapper {
 
                     failedMerges.add(targetBranch);
                 } else {
+                    // Se for squash, precisamos fazer o commit explicitamente
+                    if (squash) {
+                        GitLineHandler commitHandler = new GitLineHandler(project, repository.getRoot(),
+                                GitCommand.COMMIT);
+                        if (!mergeMessage.isEmpty()) {
+                            commitHandler.addParameters("-m", mergeMessage);
+                        } else {
+                            commitHandler.addParameters("-m",
+                                    "Merge squashed: " + sourceBranch + " para " + targetBranch);
+                        }
+                        GitCommandResult commitResult = git.runCommand(commitHandler);
+
+                        if (!commitResult.success()) {
+                            throw new VcsException("Falha ao fazer commit após squash para " + targetBranch + ": " +
+                                    commitResult.getErrorOutputAsJoinedString());
+                        }
+                    }
+
                     successfulMerges.add(targetBranch);
 
                     // Push para remote se solicitado
