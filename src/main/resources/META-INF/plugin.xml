@@ -44,7 +44,7 @@
     ]]></change-notes>
 
     <!-- Versão compatível com IntelliJ -->
-    <idea-version since-build="231" until-build="999.*"/>
+    <idea-version since-build="231"/>
 
     <!-- Depende do módulo da plataforma IntelliJ e do plugin Git4Idea -->
     <depends>com.intellij.modules.platform</depends>

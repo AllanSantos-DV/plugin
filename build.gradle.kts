@@ -20,7 +20,6 @@ intellij {
 tasks {
     patchPluginXml {
         sinceBuild.set("231") // IntelliJ IDEA 2023.1+
-        untilBuild.set("999.*") // Sem limite superior real
     }
     
     buildSearchableOptions {
