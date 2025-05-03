@@ -81,40 +81,4 @@ Este plugin é distribuído sob a licença MIT.
 ## Contato
 
 Para dúvidas ou sugestões, entre em contato com o desenvolvedor através do e-mail: [Allan Santos](mailto:allannascimentodossantos@gmail.com)
-
-## Exemplo de uso
-
-```java
-    import com.intellij.openapi.actionSystem.AnAction;
-    import com.intellij.openapi.actionSystem.AnActionEvent;
-    import com.intellij.openapi.project.Project;
-    import com.intellij.openapi.ui.Messages;
-    import br.com.allandevs.gitmerge.actions.MultiMergeAction;
-    import br.com.allandevs.gitmerge.model.MergeConfiguration;
-    import br.com.allandevs.gitmerge.service.GitMultiMergeService;
-    import java.util.Arrays;
-    
-    public class CustomMergeAction extends AnAction {
-        @Override
-        public void actionPerformed(AnActionEvent e) {
-            Project project = e.getProject();
-            if (project == null) return;
-            
-            // Configurando o merge programaticamente
-            MergeConfiguration config = new MergeConfiguration();
-            config.setSourceBranch("feature/nova-funcionalidade");
-            config.setTargetBranches(Arrays.asList("develop", "release/1.0", "hotfix/urgent-fix"));
-            config.setSquashCommits(true);
-            config.setPushAfterMerge(true);
-            config.setDeleteSourceBranch(false);
-            config.setCommitMessage("Merge da feature para múltiplas branches");
-            
-            // Executando o merge
-            GitMultiMergeService mergeService = project.getService(GitMultiMergeService.class);
-            mergeService.executeMultiMerge(config, project, 
-                success -> Messages.showInfoMessage("Merge concluído com sucesso!", "Multi Merge"),
-                error -> Messages.showErrorDialog("Erro no merge: " + error, "Multi Merge Error")
-            );
-        }
-    }
 ```
