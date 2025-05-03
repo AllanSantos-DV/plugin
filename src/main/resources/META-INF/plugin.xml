@@ -4,14 +4,33 @@
     <vendor email="allannascimentodossantos@gmail.com" url="https://github.com/AllanSantos-DV/plugin">Allan Santos</vendor>
 
     <description><![CDATA[
-    Plugin para permitir o merge de uma branch source para múltiplos targets simultaneamente.
+    <h2>Git Multi Merge</h2>
+    <p>Plugin para realizar o merge de uma branch source para múltiplas branches target simultaneamente, com opções de push automático e limpeza de branches.</p>
     
-    Características:
-    - Selecione uma branch source e até 5 branches target
-    - Opção para squash commits durante o merge
-    - Opção para deletar a branch source após o merge bem-sucedido
-    - Visualização de progresso em tempo real
+    <h3>Principais Funcionalidades:</h3>
+    <ul>
+        <li><b>Multi-merge:</b> Selecione uma branch source e até 5 branches target para merge</li>
+        <li><b>Push Automático:</b> Atualize automaticamente os repositórios remotos após cada merge bem-sucedido</li>
+        <li><b>Squash:</b> Opção para combinar todos os commits em um único durante o merge</li>
+        <li><b>Limpeza Automática:</b> Possibilidade de deletar branches source (local e remota) após merges bem-sucedidos</li>
+        <li><b>Atualização Inteligente:</b> Fetch automático com prune para manter seu repositório atualizado</li>
+        <li><b>Feedback Detalhado:</b> Visualização em tempo real do progresso e notificações completas</li>
+    </ul>
+    
+    <p>Economize tempo e evite erros em operações repetitivas de merge. Perfeito para equipes que trabalham com múltiplas branches de feature e releases.</p>
     ]]></description>
+    
+    <change-notes><![CDATA[
+    <h3>Versão 1.0.0</h3>
+    <ul>
+        <li><b>NOVO:</b> Push automático para remotes após merge bem-sucedido</li>
+        <li><b>NOVO:</b> Deleção de branch remota junto com a local</li>
+        <li><b>NOVO:</b> Atualização automática com fetch e prune</li>
+        <li><b>MELHORADO:</b> Interface de usuário mais intuitiva</li>
+        <li><b>MELHORADO:</b> Notificações com detalhes completos das operações</li>
+        <li><b>CORRIGIDO:</b> Compatibilidade com versões mais recentes do IntelliJ IDEA</li>
+    </ul>
+    ]]></change-notes>
 
     <!-- Versão compatível com IntelliJ -->
     <idea-version since-build="231" until-build="999.*"/>
