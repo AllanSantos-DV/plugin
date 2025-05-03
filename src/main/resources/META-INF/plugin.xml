@@ -1,5 +1,4 @@
 <idea-plugin>
-    <idea-version since-build="213.0" until-build="999.*"/>
     <id>com.plugin.gitmultimerge</id>
     <name>Git Multi Merge</name>
     <vendor email="allannascimentodossantos@gmail.com" url="https://github.com/AllanSantos-DV/plugin">Allan Santos</vendor>
@@ -14,6 +13,9 @@
     - Visualização de progresso em tempo real
     ]]></description>
 
+    <!-- Versão compatível com IntelliJ -->
+    <idea-version since-build="231" until-build="999.*"/>
+
     <!-- Depende do módulo da plataforma IntelliJ e do plugin Git4Idea -->
     <depends>com.intellij.modules.platform</depends>
     <depends>Git4Idea</depends>
@@ -27,7 +29,7 @@
                 class="com.plugin.gitmultimerge.GitMultiMergeAction" 
                 text="Multi Merge..." 
                 description="Merge uma branch source em múltiplos targets">
-            <add-to-group group-id="Git.Menu" anchor="after" relative-to-action="Git.Merge"/>
+            <add-to-group group-id="Git.MainMenu" anchor="after" relative-to-action="Git.Merge"/>
             <add-to-group group-id="Git.ContextMenu" anchor="after" relative-to-action="Git.Merge"/>
         </action>
     </actions>
