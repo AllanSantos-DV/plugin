@@ -20,7 +20,7 @@ intellij {
 tasks {
     patchPluginXml {
         sinceBuild.set("231") // IntelliJ IDEA 2023.1+
-        untilBuild.set("*.*") // Compatível com todas as versões futuras
+        untilBuild.set("263.*") // Compatível com versões até 2026.3+
     }
     
     buildSearchableOptions {
