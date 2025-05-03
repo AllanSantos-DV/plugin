@@ -15,6 +15,7 @@ import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBTextField;
 import com.intellij.util.ui.JBUI;
 import git4idea.GitLocalBranch;
+import git4idea.GitRemoteBranch;
 import git4idea.commands.Git;
 import git4idea.commands.GitCommand;
 import git4idea.commands.GitCommandResult;
@@ -41,6 +42,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
     private JBList<String> targetBranchList;
     private JBCheckBox squashCheckBox;
     private JBCheckBox deleteSourceCheckBox;
+    private JBCheckBox pushAfterMergeCheckBox;
     private JBTextField mergeCommitMessageField;
 
     public GitMultiMergeDialog(@NotNull Project project, @NotNull GitRepository repository) {
@@ -101,10 +103,12 @@ public class GitMultiMergeDialog extends DialogWrapper {
         panel.add(targetScrollPane, c);
 
         // Opções adicionais
-        JPanel optionsPanel = new JPanel(new GridLayout(3, 1, 5, 5));
+        JPanel optionsPanel = new JPanel(new GridLayout(4, 1, 5, 5));
 
         squashCheckBox = new JBCheckBox("Squash commits");
         deleteSourceCheckBox = new JBCheckBox("Deletar branch source após o merge");
+        pushAfterMergeCheckBox = new JBCheckBox("Push para remote após o merge");
+        pushAfterMergeCheckBox.setSelected(true); // Habilitado por padrão
 
         // Painel para mensagem de commit
         JPanel commitMessagePanel = new JPanel(new BorderLayout(5, 5));
@@ -115,6 +119,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
 
         optionsPanel.add(squashCheckBox);
         optionsPanel.add(deleteSourceCheckBox);
+        optionsPanel.add(pushAfterMergeCheckBox);
         optionsPanel.add(commitMessagePanel);
 
         c.gridx = 0;
@@ -186,6 +191,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
 
         boolean squash = squashCheckBox.isSelected();
         boolean deleteSource = deleteSourceCheckBox.isSelected();
+        boolean pushAfterMerge = pushAfterMergeCheckBox.isSelected();
         String mergeMessage = mergeCommitMessageField.getText();
         if (mergeMessage == null || mergeMessage.trim().isEmpty()) {
             mergeMessage = "Merge branch '" + sourceBranch + "'";
@@ -194,8 +200,9 @@ public class GitMultiMergeDialog extends DialogWrapper {
         List<String> successfulMerges = new ArrayList<>();
         List<String> failedMerges = new ArrayList<>();
         List<String> hookErrors = new ArrayList<>();
+        List<String> pushErrors = new ArrayList<>();
 
-        double progressStep = 1.0 / targetBranches.size();
+        double progressStep = 1.0 / (targetBranches.size() * (pushAfterMerge ? 2 : 1));
         double currentProgress = 0.0;
 
         // Executa o merge para cada branch target
@@ -239,6 +246,25 @@ public class GitMultiMergeDialog extends DialogWrapper {
                     failedMerges.add(targetBranch);
                 } else {
                     successfulMerges.add(targetBranch);
+
+                    // Push para remote se solicitado
+                    if (pushAfterMerge) {
+                        indicator.setText("Push de " + targetBranch + " para remote");
+
+                        try {
+                            GitLineHandler pushHandler = new GitLineHandler(project, repository.getRoot(),
+                                    GitCommand.PUSH);
+                            pushHandler.addParameters("origin", targetBranch);
+                            GitCommandResult pushResult = git.runCommand(pushHandler);
+
+                            if (!pushResult.success()) {
+                                pushErrors.add("Falha ao fazer push para " + targetBranch + ": " +
+                                        pushResult.getErrorOutputAsJoinedString());
+                            }
+                        } catch (Exception e) {
+                            pushErrors.add("Erro ao fazer push para " + targetBranch + ": " + e.getMessage());
+                        }
+                    }
                 }
             } catch (VcsException e) {
                 failedMerges.add(targetBranch);
@@ -250,6 +276,19 @@ public class GitMultiMergeDialog extends DialogWrapper {
 
             currentProgress += progressStep;
             indicator.setFraction(currentProgress);
+        }
+
+        // Fetch para atualizar informações das branches
+        indicator.setText("Atualizando informações das branches (fetch)");
+        try {
+            GitLineHandler fetchHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.FETCH);
+            fetchHandler.addParameters("--prune");
+            git.runCommand(fetchHandler);
+        } catch (Exception e) {
+            VcsNotifier.getInstance(project).notifyError(
+                    "Git Multi Merge",
+                    "Erro ao executar fetch: " + e.getMessage(),
+                    "");
         }
 
         // Deleta a branch source se solicitado e se todos os merges foram bem-sucedidos
@@ -265,7 +304,35 @@ public class GitMultiMergeDialog extends DialogWrapper {
                             checkoutResult.getErrorOutputAsJoinedString());
                 }
 
-                // Deleta a branch
+                // Verifica se existe a branch remota correspondente
+                boolean remoteBranchExists = false;
+                String remoteBranchName = null;
+
+                for (GitRemoteBranch remoteBranch : repository.getBranches().getRemoteBranches()) {
+                    if (remoteBranch.getNameForLocalOperations().endsWith("/" + sourceBranch)) {
+                        remoteBranchExists = true;
+                        remoteBranchName = remoteBranch.getNameForRemoteOperations();
+                        break;
+                    }
+                }
+
+                // Deleta a branch remota se existir
+                if (remoteBranchExists && remoteBranchName != null) {
+                    GitLineHandler deleteRemoteHandler = new GitLineHandler(project, repository.getRoot(),
+                            GitCommand.PUSH);
+                    deleteRemoteHandler.addParameters("origin", "--delete", sourceBranch);
+                    GitCommandResult deleteRemoteResult = git.runCommand(deleteRemoteHandler);
+
+                    if (!deleteRemoteResult.success()) {
+                        VcsNotifier.getInstance(project).notifyWarning(
+                                "Git Multi Merge",
+                                "Falha ao excluir a branch remota " + sourceBranch + ": " +
+                                        deleteRemoteResult.getErrorOutputAsJoinedString(),
+                                "");
+                    }
+                }
+
+                // Deleta a branch local
                 GitLineHandler deleteHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.BRANCH);
                 deleteHandler.addParameters("-D", sourceBranch); // Forçar exclusão com -D
                 GitCommandResult deleteResult = git.runCommand(deleteHandler);
@@ -296,16 +363,23 @@ public class GitMultiMergeDialog extends DialogWrapper {
                     .append("\n");
         }
 
+        if (!pushErrors.isEmpty()) {
+            message.append("\nErros de push:\n")
+                    .append(String.join("\n", pushErrors))
+                    .append("\n");
+        }
+
         if (!hookErrors.isEmpty()) {
             message.append("\nErros de hooks:\n")
                     .append(String.join("\n", hookErrors));
         }
 
         if (deleteSource && !successfulMerges.isEmpty() && failedMerges.isEmpty()) {
-            message.append("\nBranch source ").append(sourceBranch).append(" foi deletada.");
+            message.append("\nBranch source ").append(sourceBranch)
+                    .append(" foi deletada localmente e no remote (se existia).");
         }
 
-        if (failedMerges.isEmpty() && hookErrors.isEmpty()) {
+        if (failedMerges.isEmpty() && hookErrors.isEmpty() && pushErrors.isEmpty()) {
             VcsNotifier.getInstance(project).notifySuccess(
                     "Git Multi Merge",
                     message.toString(),
