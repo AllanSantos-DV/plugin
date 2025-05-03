@@ -278,19 +278,6 @@ public class GitMultiMergeDialog extends DialogWrapper {
             indicator.setFraction(currentProgress);
         }
 
-        // Fetch para atualizar informações das branches
-        indicator.setText("Atualizando informações das branches (fetch)");
-        try {
-            GitLineHandler fetchHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.FETCH);
-            fetchHandler.addParameters("--prune");
-            git.runCommand(fetchHandler);
-        } catch (Exception e) {
-            VcsNotifier.getInstance(project).notifyError(
-                    "Git Multi Merge",
-                    "Erro ao executar fetch: " + e.getMessage(),
-                    "");
-        }
-
         // Deleta a branch source se solicitado e se todos os merges foram bem-sucedidos
         if (deleteSource && !successfulMerges.isEmpty() && failedMerges.isEmpty()) {
             try {
@@ -347,6 +334,24 @@ public class GitMultiMergeDialog extends DialogWrapper {
                         "Erro ao deletar branch source: " + e.getMessage(),
                         "");
             }
+        }
+
+        // Fetch para atualizar informações das branches - movido para APÓS a deleção de
+        // branches
+        indicator.setText("Atualizando informações das branches (fetch)");
+        try {
+            // Executa um fetch mais completo para garantir a atualização das branches
+            GitLineHandler fetchAllHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.FETCH);
+            fetchAllHandler.addParameters("--all", "--prune");
+            git.runCommand(fetchAllHandler);
+
+            // Força a atualização do repositório no IntelliJ
+            repository.update();
+        } catch (Exception e) {
+            VcsNotifier.getInstance(project).notifyError(
+                    "Git Multi Merge",
+                    "Erro ao executar fetch: " + e.getMessage(),
+                    "");
         }
 
         // Notifica o resultado
