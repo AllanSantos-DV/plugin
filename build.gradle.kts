@@ -31,6 +31,13 @@ tasks {
         gradleVersion = "7.6.2"
         distributionType = Wrapper.DistributionType.ALL
     }
+    
+    // Configuração do nome do arquivo ZIP gerado
+    buildPlugin {
+        archiveBaseName.set("GitMultiMerge")
+        archiveVersion.set(version)
+        archiveClassifier.set("")
+    }
 }
 
 dependencies {
