@@ -55,7 +55,7 @@ Plugin para IntelliJ IDEA que permite realizar o merge de uma branch source para
 5. **Checkout** para uma branch segura
 6. **Deleção** da branch source local (se solicitado e todos os merges forem bem-sucedidos)
 7. **Deleção** da branch source remota (se existir, for solicitado e todos os merges forem bem-sucedidos)
-8. **Notificação** do resultado final com detalhes de cada operação
+8. **Notificação** do resultado com detalhes de cada operação
 
 ## Solução de problemas
 
@@ -76,4 +76,9 @@ Sinta-se à vontade para contribuir com este projeto através de pull requests o
 
 ## Licença
 
-Este plugin é distribuído sob a licença MIT. 
+Este plugin é distribuído sob a licença MIT.
+
+## Contato
+
+Para dúvidas ou sugestões, entre em contato com o desenvolvedor através do e-mail: [Allan Santos](mailto:allannascimentodossantos@gmail.com)
+```
