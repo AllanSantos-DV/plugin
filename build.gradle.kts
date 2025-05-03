@@ -20,6 +20,7 @@ intellij {
 tasks {
     patchPluginXml {
         sinceBuild.set("231") // IntelliJ IDEA 2023.1+
+        untilBuild.set("*.*") // Compatível com todas as versões futuras
     }
     
     buildSearchableOptions {
@@ -35,7 +36,7 @@ tasks {
     // Configuração do nome do arquivo ZIP gerado
     buildPlugin {
         archiveBaseName.set("GitMultiMerge")
-        archiveVersion.set(version)
+        archiveVersion.set(project.version.toString())
         archiveClassifier.set("")
     }
 }

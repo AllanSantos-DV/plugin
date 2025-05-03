@@ -4,6 +4,7 @@ import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.ComboBox;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vcs.VcsException;
@@ -48,7 +49,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
     private JBCheckBox pushAfterMergeCheckBox;
     private JBTextField mergeCommitMessageField;
     private DefaultListModel<String> targetListModel;
-    private List<String> allBranchNames;
+    private final List<String> allBranchNames;
 
     public GitMultiMergeDialog(@NotNull Project project, @NotNull GitRepository repository) {
         super(project);
@@ -81,7 +82,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
 
         c.gridy = 1;
         c.weighty = 0.1;
-        sourceBranchComboBox = new JComboBox<>(allBranchNames.toArray(new String[0]));
+        sourceBranchComboBox = new ComboBox<>(allBranchNames.toArray(new String[0]));
 
         // Tentar selecionar a branch atual
         String currentBranch = repository.getCurrentBranchName();
@@ -368,18 +369,17 @@ public class GitMultiMergeDialog extends DialogWrapper {
 
                 // Verifica se existe a branch remota correspondente
                 boolean remoteBranchExists = false;
-                String remoteBranchName = null;
 
                 for (GitRemoteBranch remoteBranch : repository.getBranches().getRemoteBranches()) {
                     if (remoteBranch.getNameForLocalOperations().endsWith("/" + sourceBranch)) {
                         remoteBranchExists = true;
-                        remoteBranchName = remoteBranch.getNameForRemoteOperations();
+                        remoteBranch.getNameForRemoteOperations();
                         break;
                     }
                 }
 
                 // Deleta a branch remota se existir
-                if (remoteBranchExists && remoteBranchName != null) {
+                if (remoteBranchExists) {
                     GitLineHandler deleteRemoteHandler = new GitLineHandler(project, repository.getRoot(),
                             GitCommand.PUSH);
                     deleteRemoteHandler.addParameters("origin", "--delete", sourceBranch);
