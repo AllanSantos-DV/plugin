@@ -6,6 +6,7 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.Presentation;
 import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.Project;
+import com.plugin.gitmultimerge.util.MessageBundle;
 import com.plugin.gitmultimerge.util.NotificationHelper;
 import git4idea.repo.GitRepository;
 import git4idea.repo.GitRepositoryManager;
@@ -47,7 +48,7 @@ public class GitMultiMergeAction extends AnAction implements DumbAware {
             NotificationHelper.notifyError(
                     project,
                     NotificationHelper.DEFAULT_TITLE,
-                    "Não foi possível encontrar um repositório Git válido");
+                    MessageBundle.message("error.no.git"));
             return;
         }
 
@@ -65,8 +66,8 @@ public class GitMultiMergeAction extends AnAction implements DumbAware {
     public void update(@NotNull AnActionEvent e) {
         // Configuração da apresentação conforme padrão 2025
         Presentation presentation = e.getPresentation();
-        presentation.setText("Git Multi Merge", false); // Não usar mnemônico
-        presentation.setDescription("Merge uma branch para múltiplos targets");
+        presentation.setText(MessageBundle.message("action.GitMultiMerge.text"), false); // Não usar mnemônico
+        presentation.setDescription(MessageBundle.message("action.GitMultiMerge.description"));
 
         // Ativa a ação apenas quando um projeto está aberto e tem Git
         Project project = e.getProject();

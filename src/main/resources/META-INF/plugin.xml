@@ -50,6 +50,8 @@
     <depends>com.intellij.modules.platform</depends>
     <depends>Git4Idea</depends>
 
+    <resource-bundle>messages.GitMultiMergeBundle</resource-bundle>
+
     <extensions defaultExtensionNs="com.intellij">
         <!-- Registro do serviço que implementa a lógica de negócio -->
         <projectService serviceInterface="com.plugin.gitmultimerge.service.GitMultiMergeService" 
@@ -58,15 +60,15 @@
         <!-- Grupo de notificações para o plugin -->
         <notificationGroup id="Git Multi Merge" 
                           displayType="BALLOON" 
-                          toolWindowId="Version Control"/>
+                          toolWindowId="Version Control" 
+                          bundle="messages.GitMultiMergeBundle"
+                          key="notification.group.git.multi.merge"/>
     </extensions>
 
     <actions>
         <!-- Definição da ação principal -->
         <action id="GitMultiMerge.Action" 
-                class="com.plugin.gitmultimerge.GitMultiMergeAction" 
-                text="Git: Multi Merge"
-                description="Merge uma branch para múltiplos targets"
+                class="com.plugin.gitmultimerge.GitMultiMergeAction"
                 icon="/icons/multiMerge.svg">
             <!-- Grupos corretos conforme documentação 2025 -->
             <add-to-group group-id="VersionControlsGroup" anchor="after" relative-to-action="CheckinProject"/>

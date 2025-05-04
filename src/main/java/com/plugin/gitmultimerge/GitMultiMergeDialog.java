@@ -15,6 +15,7 @@ import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBTextField;
 import com.intellij.util.ui.JBUI;
 import com.plugin.gitmultimerge.service.GitMultiMergeService;
+import com.plugin.gitmultimerge.util.MessageBundle;
 import com.plugin.gitmultimerge.util.NotificationHelper;
 import git4idea.repo.GitRepository;
 import org.jetbrains.annotations.NotNull;
@@ -54,7 +55,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
         // Usa o serviço para obter os nomes das branches
         this.allBranchNames = gitService.getBranchNames(repository);
 
-        setTitle("Git Multi Merge");
+        setTitle(MessageBundle.message("dialog.title"));
         init();
     }
 
@@ -74,7 +75,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
         c.gridwidth = 1;
         c.weightx = 0.5;
         c.weighty = 0;
-        panel.add(new JBLabel("Branch source:"), c);
+        panel.add(new JBLabel(MessageBundle.message("source.branch.label")), c);
 
         c.gridy = 1;
         c.weighty = 0.1;
@@ -92,7 +93,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
         c.gridx = 1;
         c.gridy = 0;
         c.weighty = 0;
-        panel.add(new JBLabel("Branches Target (máx. 5):"), c);
+        panel.add(new JBLabel(MessageBundle.message("target.branches.label")), c);
 
         c.gridy = 1;
         c.weighty = 1.0;
@@ -102,7 +103,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
 
         // Campo de busca
         searchField = new JBTextField();
-        searchField.getEmptyText().setText("Buscar branches...");
+        searchField.getEmptyText().setText(MessageBundle.message("target.branches.search"));
         targetPanel.add(searchField, BorderLayout.NORTH);
 
         // Lista de branches target
@@ -139,14 +140,14 @@ public class GitMultiMergeDialog extends DialogWrapper {
         // Opções adicionais
         JPanel optionsPanel = new JPanel(new GridLayout(4, 1, 5, 5));
 
-        squashCheckBox = new JBCheckBox("Squash commits");
-        deleteSourceCheckBox = new JBCheckBox("Deletar branch source após o merge");
-        pushAfterMergeCheckBox = new JBCheckBox("Push para remote após o merge");
+        squashCheckBox = new JBCheckBox(MessageBundle.message("options.squash.commits"));
+        deleteSourceCheckBox = new JBCheckBox(MessageBundle.message("options.delete.branch.after"));
+        pushAfterMergeCheckBox = new JBCheckBox(MessageBundle.message("options.push.after.merge"));
         pushAfterMergeCheckBox.setSelected(true); // Habilitado por padrão
 
         // Painel para mensagem de commit
         JPanel commitMessagePanel = new JPanel(new BorderLayout(5, 5));
-        commitMessagePanel.add(new JBLabel("Mensagem de merge (opcional):"), BorderLayout.NORTH);
+        commitMessagePanel.add(new JBLabel(MessageBundle.message("options.commit.message")), BorderLayout.NORTH);
         mergeCommitMessageField = new JBTextField();
         mergeCommitMessageField.setEnabled(true);
         commitMessagePanel.add(mergeCommitMessageField, BorderLayout.CENTER);
