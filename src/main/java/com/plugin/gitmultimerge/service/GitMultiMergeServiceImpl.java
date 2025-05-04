@@ -1,0 +1,348 @@
+package com.plugin.gitmultimerge.service;
+
+import com.intellij.openapi.components.Service;
+import com.intellij.openapi.progress.ProgressIndicator;
+import com.intellij.openapi.project.Project;
+import com.plugin.gitmultimerge.util.NotificationHelper;
+import git4idea.GitLocalBranch;
+import git4idea.GitRemoteBranch;
+import git4idea.commands.*;
+import git4idea.repo.GitRepository;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
+/**
+ * Implementação do serviço que realiza operações Git para o Multi Merge.
+ * Registrado como serviço no plugin.xml.
+ */
+@Service(Service.Level.PROJECT)
+public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
+
+    private final Project project;
+    private final Git git;
+
+    public GitMultiMergeServiceImpl(Project project) {
+        this.project = project;
+        this.git = Git.getInstance();
+    }
+
+    @Override
+    public List<String> getBranchNames(GitRepository repository) {
+        List<String> branchNames = new ArrayList<>();
+        Collection<GitLocalBranch> localBranches = repository.getBranches().getLocalBranches();
+
+        for (GitLocalBranch branch : localBranches) {
+            branchNames.add(branch.getName());
+        }
+
+        return branchNames;
+    }
+
+    @Override
+    public CompletableFuture<Boolean> performMerge(
+            GitRepository repository,
+            String sourceBranch,
+            List<String> targetBranches,
+            boolean squash,
+            boolean pushAfterMerge,
+            boolean deleteSourceBranch,
+            String commitMessage,
+            ProgressIndicator indicator) {
+
+        // Criar um CompletableFuture para retornar o resultado
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+
+        // Executar a operação em background
+        try {
+            // Iniciar uma tarefa em background
+            executeMultiMergeOperation(
+                    repository,
+                    sourceBranch,
+                    targetBranches,
+                    squash,
+                    pushAfterMerge,
+                    deleteSourceBranch,
+                    commitMessage,
+                    indicator,
+                    future);
+        } catch (Exception e) {
+            NotificationHelper.notifyError(project, NotificationHelper.DEFAULT_TITLE, e);
+            future.complete(false);
+        }
+
+        return future;
+    }
+
+    /**
+     * Executa a operação de multi-merge.
+     */
+    private void executeMultiMergeOperation(
+            GitRepository repository,
+            String sourceBranch,
+            List<String> targetBranches,
+            boolean squash,
+            boolean pushAfterMerge,
+            boolean deleteSourceBranch,
+            String commitMessage,
+            ProgressIndicator indicator,
+            CompletableFuture<Boolean> future) {
+
+        try {
+            // Inicializa o indicador de progresso
+            indicator.setIndeterminate(false);
+            indicator.setText("Preparando operação de merge...");
+            indicator.setFraction(0.0);
+
+            // Salva a branch atual para retornar a ela depois
+            String originalBranch = repository.getCurrentBranchName();
+            if (originalBranch == null) {
+                NotificationHelper.notifyError(
+                        project,
+                        NotificationHelper.DEFAULT_TITLE,
+                        "Não foi possível determinar a branch atual");
+                future.complete(false);
+                return;
+            }
+
+            // Calcula o progresso total: 1 etapa por branch + voltar para branch original
+            double totalSteps = targetBranches.size() + 1;
+            double currentStep = 0;
+
+            boolean allSuccessful = true;
+            List<String> successfulMerges = new ArrayList<>();
+            List<String> failedMerges = new ArrayList<>();
+
+            // Para cada branch target
+            for (String targetBranch : targetBranches) {
+                indicator.setText("Processando merge para " + targetBranch);
+                indicator.setFraction(currentStep / totalSteps);
+
+                // 1. Checkout na branch target
+                GitCommandResult checkoutResult = checkout(repository, targetBranch);
+                if (!checkoutResult.success()) {
+                    NotificationHelper.notifyError(
+                            project,
+                            NotificationHelper.DEFAULT_TITLE,
+                            "Falha ao fazer checkout para " + targetBranch + ":\n" +
+                                    String.join("\n", checkoutResult.getErrorOutput()));
+                    allSuccessful = false;
+                    failedMerges.add(targetBranch);
+                    continue;
+                }
+
+                // 2. Executa o merge
+                GitCommandResult mergeResult = merge(repository, sourceBranch, squash, commitMessage);
+                if (!mergeResult.success()) {
+                    NotificationHelper.notifyError(
+                            project,
+                            NotificationHelper.DEFAULT_TITLE,
+                            "Falha ao fazer merge de " + sourceBranch + " para " + targetBranch + ":\n" +
+                                    String.join("\n", mergeResult.getErrorOutput()));
+                    allSuccessful = false;
+                    failedMerges.add(targetBranch);
+                    continue;
+                }
+
+                successfulMerges.add(targetBranch);
+
+                // 3. Push se necessário
+                if (pushAfterMerge) {
+                    indicator.setText("Fazendo push de " + targetBranch);
+                    GitCommandResult pushResult = push(repository, targetBranch);
+                    if (!pushResult.success()) {
+                        NotificationHelper.notifyWarning(
+                                project,
+                                NotificationHelper.DEFAULT_TITLE,
+                                "Falha ao fazer push de " + targetBranch + ":\n" +
+                                        String.join("\n", pushResult.getErrorOutput()));
+                        // Não vamos falhar todo o processo apenas por causa do push
+                    }
+                }
+
+                currentStep++;
+            }
+
+            // Volta para a branch original
+            indicator.setText("Retornando para a branch original...");
+            indicator.setFraction(currentStep / totalSteps);
+
+            GitCommandResult returnResult = checkout(repository, originalBranch);
+            if (!returnResult.success()) {
+                NotificationHelper.notifyError(
+                        project,
+                        NotificationHelper.DEFAULT_TITLE,
+                        "Falha ao retornar para a branch original " + originalBranch + ":\n" +
+                                String.join("\n", returnResult.getErrorOutput()));
+                allSuccessful = false;
+            }
+
+            // 4. Deletar branch source se necessário
+            if (deleteSourceBranch && allSuccessful) {
+                indicator.setText("Deletando branch source...");
+
+                // Verificar se podemos usar a branch atual
+                if (originalBranch.equals(sourceBranch)) {
+                    NotificationHelper.notifyWarning(
+                            project,
+                            NotificationHelper.DEFAULT_TITLE,
+                            "Não é possível deletar a branch " + sourceBranch + " pois é a branch atual.");
+                } else {
+                    // Verifica se há uma branch remota correspondente
+                    GitRemoteBranch remoteBranch = findRemoteBranch(repository, sourceBranch);
+
+                    // Deleta a branch local
+                    GitCommandResult deleteResult = deleteBranch(repository, sourceBranch);
+                    if (!deleteResult.success()) {
+                        NotificationHelper.notifyWarning(
+                                project,
+                                NotificationHelper.DEFAULT_TITLE,
+                                "Falha ao deletar a branch source " + sourceBranch + ":\n" +
+                                        String.join("\n", deleteResult.getErrorOutput()));
+                    } else if (remoteBranch != null) {
+                        // Se tem branch remota, deleta ela também
+                        GitCommandResult deleteRemoteResult = deleteRemoteBranch(repository, remoteBranch);
+                        if (!deleteRemoteResult.success()) {
+                            NotificationHelper.notifyWarning(
+                                    project,
+                                    NotificationHelper.DEFAULT_TITLE,
+                                    "Falha ao deletar a branch remota " + remoteBranch.getNameForRemoteOperations()
+                                            + ":\n" +
+                                            String.join("\n", deleteRemoteResult.getErrorOutput()));
+                        }
+                    }
+                }
+            }
+
+            // Finaliza o progresso
+            indicator.setText("Atualizando referências Git...");
+
+            // Executar fetch para atualizar referências
+            GitLineHandler fetchHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.FETCH);
+            fetchHandler.addParameters("--all", "--prune");
+            git.runCommand(fetchHandler);
+
+            // Forçar atualização do repositório
+            repository.update();
+
+            indicator.setText("Operação concluída");
+            indicator.setFraction(1.0);
+
+            // Notificar resultados
+            StringBuilder summary = new StringBuilder();
+
+            if (!successfulMerges.isEmpty()) {
+                summary.append("Merges bem-sucedidos: ").append(String.join(", ", successfulMerges));
+            }
+
+            if (!failedMerges.isEmpty()) {
+                if (!summary.isEmpty())
+                    summary.append("\n\n");
+                summary.append("Merges com falha: ").append(String.join(", ", failedMerges));
+            }
+
+            if (allSuccessful) {
+                NotificationHelper.notifySuccess(
+                        project,
+                        NotificationHelper.DEFAULT_TITLE,
+                        summary.toString());
+            } else {
+                NotificationHelper.notifyWarning(
+                        project,
+                        NotificationHelper.DEFAULT_TITLE,
+                        summary.toString());
+            }
+
+            future.complete(allSuccessful);
+
+        } catch (Exception e) {
+            NotificationHelper.notifyError(
+                    project,
+                    NotificationHelper.DEFAULT_TITLE,
+                    e);
+            future.complete(false);
+        }
+    }
+
+    /**
+     * Faz o checkout para uma branch específica
+     */
+    private GitCommandResult checkout(@NotNull GitRepository repository, @NotNull String branchName) {
+        GitLineHandler handler = new GitLineHandler(project, repository.getRoot(), GitCommand.CHECKOUT);
+        handler.addParameters(branchName);
+        return git.runCommand(handler);
+    }
+
+    /**
+     * Executa o merge com a branch source
+     */
+    private GitCommandResult merge(@NotNull GitRepository repository, @NotNull String sourceBranch,
+            boolean squash, String commitMessage) {
+        GitLineHandler handler = new GitLineHandler(project, repository.getRoot(), GitCommand.MERGE);
+
+        if (squash) {
+            handler.addParameters("--squash");
+        }
+
+        handler.addParameters(sourceBranch);
+
+        GitCommandResult result = git.runCommand(handler);
+
+        // Se foi com squash e deu sucesso, precisamos fazer o commit
+        if (squash && result.success()) {
+            GitLineHandler commitHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.COMMIT);
+            commitHandler.addParameters("--no-edit");
+
+            if (commitMessage != null && !commitMessage.isEmpty()) {
+                commitHandler.addParameters("-m", commitMessage);
+            }
+
+            return git.runCommand(commitHandler);
+        }
+
+        return result;
+    }
+
+    /**
+     * Faz push da branch atual
+     */
+    private GitCommandResult push(@NotNull GitRepository repository, @NotNull String branchName) {
+        GitLineHandler handler = new GitLineHandler(project, repository.getRoot(), GitCommand.PUSH);
+        handler.addParameters("origin", branchName);
+        return git.runCommand(handler);
+    }
+
+    /**
+     * Deleta uma branch local
+     */
+    private GitCommandResult deleteBranch(@NotNull GitRepository repository, @NotNull String branchName) {
+        GitLineHandler handler = new GitLineHandler(project, repository.getRoot(), GitCommand.BRANCH);
+        handler.addParameters("-D", branchName);
+        return git.runCommand(handler);
+    }
+
+    /**
+     * Encontra a branch remota correspondente a uma branch local
+     */
+    private GitRemoteBranch findRemoteBranch(@NotNull GitRepository repository, @NotNull String localBranchName) {
+        for (GitRemoteBranch remoteBranch : repository.getBranches().getRemoteBranches()) {
+            if (remoteBranch.getNameForLocalOperations().equals("origin/" + localBranchName)) {
+                return remoteBranch;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Deleta uma branch remota
+     */
+    private GitCommandResult deleteRemoteBranch(@NotNull GitRepository repository,
+            @NotNull GitRemoteBranch remoteBranch) {
+        GitLineHandler handler = new GitLineHandler(project, repository.getRoot(), GitCommand.PUSH);
+        handler.addParameters("origin", "--delete", remoteBranch.getNameForRemoteOperations());
+        return git.runCommand(handler);
+    }
+}
