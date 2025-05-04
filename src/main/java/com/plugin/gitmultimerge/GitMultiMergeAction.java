@@ -23,7 +23,8 @@ public class GitMultiMergeAction extends AnAction implements DumbAware {
      * A apresentação será configurada no método update.
      */
     public GitMultiMergeAction() {
-        // Construtor vazio - a apresentação será configurada no método update
+        // A apresentação será configurada no método update para compatibilidade com
+        // 2025
     }
 
     @Override
@@ -62,13 +63,23 @@ public class GitMultiMergeAction extends AnAction implements DumbAware {
 
     @Override
     public void update(@NotNull AnActionEvent e) {
-        // Configuração da apresentação - feita a cada atualização da interface
+        // Configuração da apresentação conforme padrão 2025
         Presentation presentation = e.getPresentation();
-        presentation.setText("Git Multi Merge");
+        presentation.setText("Git Multi Merge", false); // Não usar mnemônico
         presentation.setDescription("Merge uma branch para múltiplos targets");
 
-        // Ativa ou desativa o item de menu com base na disponibilidade do Git
+        // Ativa a ação apenas quando um projeto está aberto e tem Git
         Project project = e.getProject();
-        presentation.setEnabledAndVisible(project != null);
+        if (project == null) {
+            presentation.setEnabledAndVisible(false);
+            return;
+        }
+
+        // Verifica se há repositórios Git disponíveis
+        GitRepositoryManager repositoryManager = GitRepositoryManager.getInstance(project);
+        boolean hasGitRepositories = !repositoryManager.getRepositories().isEmpty();
+
+        // Atualiza visibilidade e estado de habilitação
+        presentation.setEnabledAndVisible(hasGitRepositories);
     }
 }
