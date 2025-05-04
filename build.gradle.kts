@@ -55,12 +55,12 @@ tasks {
     }
 }
 
-// Configuração do Java para UTF-8
+// Configuração do Java para UTF-8 e compatibilidade com IntelliJ IDEA 2023.1+
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
-    // Configurações para Java 11
-    sourceCompatibility = "11"
-    targetCompatibility = "11"
+    // Configurações para Java 17 (requerido pelo IntelliJ IDEA 2023.1)
+    sourceCompatibility = "17"
+    targetCompatibility = "17"
 }
 
 dependencies {
