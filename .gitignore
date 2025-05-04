@@ -35,3 +35,6 @@ bin/
 
 # Publicação do plugin
 PUBLISHING.md
+
+# Arquivos de configuração
+.cursor

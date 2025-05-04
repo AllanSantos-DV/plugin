@@ -19,11 +19,14 @@ Plugin para IntelliJ IDEA que permite realizar o merge de uma branch source para
 - Detecção e notificação de conflitos
 - Identificação de problemas com hooks Git
 - Notificação detalhada dos resultados das operações
+- **Suporte completo a múltiplos idiomas** (Inglês, Português do Brasil e Espanhol)
+- **Detecção automática do idioma do sistema**
 
 ## Requisitos
 
 - IntelliJ IDEA 2023.1 ou superior (Community ou Ultimate)
 - Git instalado e configurado
+- Java 17 ou superior (requisito do IntelliJ IDEA 2023.1+)
 - Acesso aos remotes para operações de push e delete (se utilizadas)
 
 ## Instalação Manual
@@ -67,6 +70,20 @@ Plugin para IntelliJ IDEA que permite realizar o merge de uma branch source para
 8. **Deleção** da branch source remota (se existir, for solicitado e todos os merges forem bem-sucedidos)
 9. **Notificação** do resultado com detalhes de cada operação
 
+## Suporte a Múltiplos Idiomas
+
+O plugin Git Multi Merge suporta os seguintes idiomas:
+
+- Inglês (padrão)
+- Português do Brasil
+- Espanhol
+
+O idioma é detectado automaticamente com base no idioma configurado no IntelliJ IDEA ou no sistema operacional. Para alterar o idioma do plugin, basta alterar o idioma do IntelliJ IDEA em:
+
+- Settings/Preferences > Appearance & Behavior > Appearance > UI Options > Override default language
+
+Para mais detalhes sobre a internacionalização, consulte o arquivo [INTERNATIONALIZATION.md](INTERNATIONALIZATION.md).
+
 ## Solução de problemas
 
 - Se o plugin não aparecer no menu Git, verifique se está instalado e ativo em Settings > Plugins
@@ -74,6 +91,7 @@ Plugin para IntelliJ IDEA que permite realizar o merge de uma branch source para
 - Em caso de erros persistentes, tente limpar o cache do IntelliJ (File > Invalidate Caches / Restart...)
 - Verifique sua conexão com o remote antes de usar as funcionalidades de push/delete remotas
 - Se as alterações não aparecerem no remote após o merge, verifique se a opção "Push para remote após o merge" está habilitada
+- Para problemas de idioma, verifique se o IntelliJ IDEA está configurado para usar o idioma de sua preferência
 
 ## Limitações
 
@@ -84,6 +102,20 @@ Plugin para IntelliJ IDEA que permite realizar o merge de uma branch source para
 ## Contribuição
 
 Sinta-se à vontade para contribuir com este projeto através de pull requests ou reportando problemas.
+
+### Adicionando novos idiomas
+
+Para adicionar suporte a novos idiomas, crie um arquivo de propriedades seguindo o padrão:
+```
+src/main/resources/messages/GitMultiMergeBundle_XX.properties
+```
+onde `XX` é o código do idioma (como fr, de, it, etc.).
+
+## Versões
+
+- **1.2.0**: Suporte completo a internacionalização, compatibilidade com Java 17
+- **1.1.0**: Melhorias na interface e correções de bugs
+- **1.0.0**: Versão inicial com funcionalidades básicas
 
 ## Licença
 

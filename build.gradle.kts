@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.plugin"
-version = "1.1.0"
+version = "1.2.0"
 
 repositories {
     mavenCentral()
@@ -15,6 +15,10 @@ intellij {
     version.set("2023.1")
     type.set("IC") // IntelliJ IDEA Community Edition
     plugins.set(listOf("Git4Idea"))
+    
+    // Necessário para internacionalização
+    instrumentCode.set(false)
+    downloadSources.set(true)
 }
 
 tasks {
@@ -39,6 +43,24 @@ tasks {
         archiveVersion.set(project.version.toString())
         archiveClassifier.set("")
     }
+    
+    // Configurando o processamento de recursos para internacionalização
+    processResources {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+        
+        // Garantir que os arquivos de propriedades sejam copiados
+        from("src/main/resources") {
+            include("**/*.properties")
+        }
+    }
+}
+
+// Configuração do Java para UTF-8 e compatibilidade com IntelliJ IDEA 2023.1+
+tasks.withType<JavaCompile> {
+    options.encoding = "UTF-8"
+    // Configurações para Java 17 (requerido pelo IntelliJ IDEA 2023.1)
+    sourceCompatibility = "17"
+    targetCompatibility = "17"
 }
 
 dependencies {

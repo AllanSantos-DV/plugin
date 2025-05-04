@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>com.plugin.gitmultimerge</id>
     <name>Git Multi Merge</name>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
     <vendor email="allannascimentodossantos@gmail.com" url="https://github.com/AllanSantos-DV/plugin">Allan Santos</vendor>
 
     <description><![CDATA[
@@ -16,12 +16,23 @@
         <li><b>Limpeza Automática:</b> Possibilidade de deletar branches source (local e remota) após merges bem-sucedidos</li>
         <li><b>Atualização Inteligente:</b> Fetch automático com prune para manter seu repositório atualizado</li>
         <li><b>Feedback Detalhado:</b> Visualização em tempo real do progresso e notificações completas</li>
+        <li><b>Multilíngue:</b> Suporte completo para Inglês, Português do Brasil e Espanhol</li>
     </ul>
     
     <p>Economize tempo e evite erros em operações repetitivas de merge. Perfeito para equipes que trabalham com múltiplas branches de feature e releases.</p>
     ]]></description>
     
     <change-notes><![CDATA[
+    <h3>Versão 1.2.0</h3>
+    <ul>
+        <li><b>NOVO:</b> Internacionalização completa do plugin</li>
+        <li><b>NOVO:</b> Suporte para múltiplos idiomas (Inglês, Português do Brasil, Espanhol)</li>
+        <li><b>NOVO:</b> Detecção automática do idioma do usuário</li>
+        <li><b>MELHORADO:</b> Arquitetura interna para melhor organização</li>
+        <li><b>MELHORADO:</b> Documentação para desenvolvimento e uso</li>
+        <li><b>CORRIGIDO:</b> Compatibilidade com IntelliJ IDEA 2023.1 e Java 17</li>
+    </ul>
+    
     <h3>Versão 1.1.0</h3>
     <ul>
         <li><b>NOVO:</b> Interface aprimorada com ComboBox para seleção de branch source</li>
@@ -50,20 +61,36 @@
     <depends>com.intellij.modules.platform</depends>
     <depends>Git4Idea</depends>
 
+    <resource-bundle>messages.GitMultiMergeBundle</resource-bundle>
+
     <extensions defaultExtensionNs="com.intellij">
-        <!-- Extensões se necessário -->
+        <!-- Registro do serviço que implementa a lógica de negócio -->
+        <projectService serviceInterface="com.plugin.gitmultimerge.service.GitMultiMergeService" 
+                        serviceImplementation="com.plugin.gitmultimerge.service.GitMultiMergeServiceImpl"/>
+        
+        <!-- Grupo de notificações para o plugin -->
+        <notificationGroup id="Git Multi Merge" 
+                          displayType="BALLOON" 
+                          toolWindowId="Version Control" 
+                          bundle="messages.GitMultiMergeBundle"
+                          key="notification.group.git.multi.merge"/>
     </extensions>
 
     <actions>
+        <!-- Definição da ação principal -->
         <action id="GitMultiMerge.Action" 
-                class="com.plugin.gitmultimerge.GitMultiMergeAction" 
-                text="Multi Merge"
-                description="Merge uma branch para múltiplos targets"
+                class="com.plugin.gitmultimerge.GitMultiMergeAction"
                 icon="/icons/multiMerge.svg">
-            <add-to-group group-id="VcsBar" anchor="after" relative-to-action="Vcs.Push"/>
+            <!-- Grupos corretos conforme documentação 2025 -->
+            <add-to-group group-id="VersionControlsGroup" anchor="after" relative-to-action="CheckinProject"/>
+            <add-to-group group-id="ChangesViewToolbar" anchor="after" relative-to-action="CheckinProject"/>
+            
+            <!-- Grupos padrão que são estáveis entre versões -->
             <add-to-group group-id="Git.Menu" anchor="after" relative-to-action="Git.Merge"/>
+            <add-to-group group-id="VcsGroup" anchor="last"/>
+            <add-to-group group-id="Vcs.Log.ContextMenu" anchor="last"/>
             <add-to-group group-id="Vcs.Operations.Popup" anchor="last"/>
-            <add-to-group group-id="Git.BranchOperationsPopup" anchor="last"/>
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>
     </actions>
 </idea-plugin> 

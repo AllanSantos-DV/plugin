@@ -7,8 +7,6 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.ComboBox;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.Messages;
-import com.intellij.openapi.vcs.VcsException;
-import com.intellij.openapi.vcs.VcsNotifier;
 import com.intellij.ui.DocumentAdapter;
 import com.intellij.ui.components.JBCheckBox;
 import com.intellij.ui.components.JBLabel;
@@ -16,12 +14,9 @@ import com.intellij.ui.components.JBList;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBTextField;
 import com.intellij.util.ui.JBUI;
-import git4idea.GitLocalBranch;
-import git4idea.GitRemoteBranch;
-import git4idea.commands.Git;
-import git4idea.commands.GitCommand;
-import git4idea.commands.GitCommandResult;
-import git4idea.commands.GitLineHandler;
+import com.plugin.gitmultimerge.service.GitMultiMergeService;
+import com.plugin.gitmultimerge.util.MessageBundle;
+import com.plugin.gitmultimerge.util.NotificationHelper;
 import git4idea.repo.GitRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -29,17 +24,17 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Diálogo para selecionar branches e configurar opções para o multi-merge.
+ * Usa GitMultiMergeService para implementar operações Git.
  */
 public class GitMultiMergeDialog extends DialogWrapper {
     private final Project project;
     private final GitRepository repository;
-    private final Git git;
+    private final GitMultiMergeService gitService;
 
     private JComboBox<String> sourceBranchComboBox;
     private JBList<String> targetBranchList;
@@ -55,10 +50,12 @@ public class GitMultiMergeDialog extends DialogWrapper {
         super(project);
         this.project = project;
         this.repository = repository;
-        this.git = Git.getInstance();
-        this.allBranchNames = getBranchNames();
+        // Obtém o serviço Git Multi Merge do registro de serviços do projeto
+        this.gitService = project.getService(GitMultiMergeService.class);
+        // Usa o serviço para obter os nomes das branches
+        this.allBranchNames = gitService.getBranchNames(repository);
 
-        setTitle("Git Multi Merge");
+        setTitle(MessageBundle.message("dialog.title"));
         init();
     }
 
@@ -78,7 +75,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
         c.gridwidth = 1;
         c.weightx = 0.5;
         c.weighty = 0;
-        panel.add(new JBLabel("Branch source:"), c);
+        panel.add(new JBLabel(MessageBundle.message("source.branch.label")), c);
 
         c.gridy = 1;
         c.weighty = 0.1;
@@ -96,7 +93,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
         c.gridx = 1;
         c.gridy = 0;
         c.weighty = 0;
-        panel.add(new JBLabel("Branches Target (máx. 5):"), c);
+        panel.add(new JBLabel(MessageBundle.message("target.branches.label")), c);
 
         c.gridy = 1;
         c.weighty = 1.0;
@@ -106,7 +103,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
 
         // Campo de busca
         searchField = new JBTextField();
-        searchField.getEmptyText().setText("Buscar branches...");
+        searchField.getEmptyText().setText(MessageBundle.message("target.branches.search"));
         targetPanel.add(searchField, BorderLayout.NORTH);
 
         // Lista de branches target
@@ -143,14 +140,14 @@ public class GitMultiMergeDialog extends DialogWrapper {
         // Opções adicionais
         JPanel optionsPanel = new JPanel(new GridLayout(4, 1, 5, 5));
 
-        squashCheckBox = new JBCheckBox("Squash commits");
-        deleteSourceCheckBox = new JBCheckBox("Deletar branch source após o merge");
-        pushAfterMergeCheckBox = new JBCheckBox("Push para remote após o merge");
+        squashCheckBox = new JBCheckBox(MessageBundle.message("options.squash.commits"));
+        deleteSourceCheckBox = new JBCheckBox(MessageBundle.message("options.delete.branch.after"));
+        pushAfterMergeCheckBox = new JBCheckBox(MessageBundle.message("options.push.after.merge"));
         pushAfterMergeCheckBox.setSelected(true); // Habilitado por padrão
 
         // Painel para mensagem de commit
         JPanel commitMessagePanel = new JPanel(new BorderLayout(5, 5));
-        commitMessagePanel.add(new JBLabel("Mensagem de merge (opcional):"), BorderLayout.NORTH);
+        commitMessagePanel.add(new JBLabel(MessageBundle.message("options.commit.message")), BorderLayout.NORTH);
         mergeCommitMessageField = new JBTextField();
         mergeCommitMessageField.setEnabled(true);
         commitMessagePanel.add(mergeCommitMessageField, BorderLayout.CENTER);
@@ -192,20 +189,6 @@ public class GitMultiMergeDialog extends DialogWrapper {
         }
     }
 
-    /**
-     * Obtém a lista de nomes de branches no repositório.
-     */
-    private List<String> getBranchNames() {
-        List<String> branchNames = new ArrayList<>();
-        Collection<GitLocalBranch> localBranches = repository.getBranches().getLocalBranches();
-
-        for (GitLocalBranch branch : localBranches) {
-            branchNames.add(branch.getName());
-        }
-
-        return branchNames;
-    }
-
     @Override
     protected void doOKAction() {
         // Validação de entrada
@@ -228,247 +211,35 @@ public class GitMultiMergeDialog extends DialogWrapper {
             return;
         }
 
-        // Inicia o processo de merge em background com barra de progresso
-        ProgressManager.getInstance().run(new Task.Backgroundable(project, "Git multi merge", true) {
-            @Override
-            public void run(@NotNull ProgressIndicator indicator) {
-                performMergeOperation(sourceBranch, targetBranches, indicator);
-            }
-        });
-
-        super.doOKAction();
-    }
-
-    /**
-     * Executa as operações de merge para todas as branches target.
-     */
-    private void performMergeOperation(String sourceBranch, List<String> targetBranches,
-            ProgressIndicator indicator) {
-        indicator.setIndeterminate(false);
-        indicator.setFraction(0.0);
-
+        // Configurações adicionais
         boolean squash = squashCheckBox.isSelected();
         boolean deleteSource = deleteSourceCheckBox.isSelected();
         boolean pushAfterMerge = pushAfterMergeCheckBox.isSelected();
         String mergeMessage = mergeCommitMessageField.getText();
-        if (mergeMessage == null || mergeMessage.trim().isEmpty()) {
-            mergeMessage = "Merge branch '" + sourceBranch + "'";
-        }
 
-        List<String> successfulMerges = new ArrayList<>();
-        List<String> failedMerges = new ArrayList<>();
-        List<String> hookErrors = new ArrayList<>();
-        List<String> pushErrors = new ArrayList<>();
+        // Inicia o processo de merge em background com barra de progresso
+        ProgressManager.getInstance().run(new Task.Backgroundable(project, "Git multi merge", true) {
+            @Override
+            public void run(@NotNull ProgressIndicator indicator) {
+                // Usa o serviço GitMultiMergeService para executar o merge
+                CompletableFuture<Boolean> future = gitService.performMerge(
+                        repository,
+                        sourceBranch,
+                        targetBranches,
+                        squash,
+                        pushAfterMerge,
+                        deleteSource,
+                        mergeMessage,
+                        indicator);
 
-        double progressStep = 1.0 / (targetBranches.size() * (pushAfterMerge ? 2 : 1));
-        double currentProgress = 0.0;
-
-        // Executa o merge para cada branch target
-        for (String targetBranch : targetBranches) {
-            indicator.setText("Merge de " + sourceBranch + " para " + targetBranch);
-
-            try {
-                // Checkout para a branch target
-                GitLineHandler checkoutHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.CHECKOUT);
-                checkoutHandler.addParameters(targetBranch);
-                GitCommandResult checkoutResult = git.runCommand(checkoutHandler);
-
-                if (!checkoutResult.success()) {
-                    throw new VcsException("Falha ao fazer checkout para " + targetBranch + ": " +
-                            checkoutResult.getErrorOutputAsJoinedString());
-                }
-
-                // Executa o merge
-                GitLineHandler mergeHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.MERGE);
-                if (squash) {
-                    mergeHandler.addParameters("--squash");
-                }
-                if (!squash && !mergeMessage.isEmpty()) {
-                    mergeHandler.addParameters("-m", mergeMessage);
-                }
-                mergeHandler.addParameters(sourceBranch);
-                GitCommandResult mergeResult = git.runCommand(mergeHandler);
-
-                if (!mergeResult.success()) {
-                    // Verifica se a mensagem de erro contém indicações de hook
-                    boolean hookError = mergeResult.getErrorOutputAsJoinedString().contains("hook");
-
-                    if (hookError) {
-                        hookErrors.add("Possível hook Git impediu o merge para " +
-                                targetBranch + ": " + mergeResult.getErrorOutputAsJoinedString());
-                    } else {
-                        throw new VcsException("Falha ao fazer merge para " + targetBranch + ": " +
-                                mergeResult.getErrorOutputAsJoinedString());
-                    }
-
-                    failedMerges.add(targetBranch);
-                } else {
-                    // Se for squash, precisamos fazer o commit explicitamente
-                    if (squash) {
-                        GitLineHandler commitHandler = new GitLineHandler(project, repository.getRoot(),
-                                GitCommand.COMMIT);
-                        if (!mergeMessage.isEmpty()) {
-                            commitHandler.addParameters("-m", mergeMessage);
-                        } else {
-                            commitHandler.addParameters("-m",
-                                    "Merge squashed: " + sourceBranch + " para " + targetBranch);
-                        }
-                        GitCommandResult commitResult = git.runCommand(commitHandler);
-
-                        if (!commitResult.success()) {
-                            throw new VcsException("Falha ao fazer commit após squash para " + targetBranch + ": " +
-                                    commitResult.getErrorOutputAsJoinedString());
-                        }
-                    }
-
-                    successfulMerges.add(targetBranch);
-
-                    // Push para remote se solicitado
-                    if (pushAfterMerge) {
-                        indicator.setText("Push de " + targetBranch + " para remote");
-
-                        try {
-                            GitLineHandler pushHandler = new GitLineHandler(project, repository.getRoot(),
-                                    GitCommand.PUSH);
-                            pushHandler.addParameters("origin", targetBranch);
-                            GitCommandResult pushResult = git.runCommand(pushHandler);
-
-                            if (!pushResult.success()) {
-                                pushErrors.add("Falha ao fazer push para " + targetBranch + ": " +
-                                        pushResult.getErrorOutputAsJoinedString());
-                            }
-                        } catch (Exception e) {
-                            pushErrors.add("Erro ao fazer push para " + targetBranch + ": " + e.getMessage());
-                        }
-                    }
-                }
-            } catch (VcsException e) {
-                failedMerges.add(targetBranch);
-                VcsNotifier.getInstance(project).notifyError(
-                        "Git Multi Merge",
-                        "Erro ao processar " + targetBranch + ": " + e.getMessage(),
-                        "");
+                future.exceptionally(throwable -> {
+                    // Tratamento de erro simplificado
+                    NotificationHelper.notifyError(project, NotificationHelper.DEFAULT_TITLE, throwable);
+                    return false;
+                });
             }
+        });
 
-            currentProgress += progressStep;
-            indicator.setFraction(currentProgress);
-        }
-
-        // Deleta a branch source se solicitado e se todos os merges foram bem-sucedidos
-        if (deleteSource && !successfulMerges.isEmpty() && failedMerges.isEmpty()) {
-            try {
-                // Checkout para uma branch diferente (a primeira branch de sucesso)
-                GitLineHandler checkoutHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.CHECKOUT);
-                checkoutHandler.addParameters(successfulMerges.get(0));
-                GitCommandResult checkoutResult = git.runCommand(checkoutHandler);
-
-                if (!checkoutResult.success()) {
-                    throw new VcsException("Falha ao fazer checkout para deletar a branch source: " +
-                            checkoutResult.getErrorOutputAsJoinedString());
-                }
-
-                // Verifica se existe a branch remota correspondente
-                boolean remoteBranchExists = false;
-
-                for (GitRemoteBranch remoteBranch : repository.getBranches().getRemoteBranches()) {
-                    if (remoteBranch.getNameForLocalOperations().endsWith("/" + sourceBranch)) {
-                        remoteBranchExists = true;
-                        remoteBranch.getNameForRemoteOperations();
-                        break;
-                    }
-                }
-
-                // Deleta a branch remota se existir
-                if (remoteBranchExists) {
-                    GitLineHandler deleteRemoteHandler = new GitLineHandler(project, repository.getRoot(),
-                            GitCommand.PUSH);
-                    deleteRemoteHandler.addParameters("origin", "--delete", sourceBranch);
-                    GitCommandResult deleteRemoteResult = git.runCommand(deleteRemoteHandler);
-
-                    if (!deleteRemoteResult.success()) {
-                        VcsNotifier.getInstance(project).notifyWarning(
-                                "Git Multi Merge",
-                                "Falha ao excluir a branch remota " + sourceBranch + ": " +
-                                        deleteRemoteResult.getErrorOutputAsJoinedString(),
-                                "");
-                    }
-                }
-
-                // Deleta a branch local
-                GitLineHandler deleteHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.BRANCH);
-                deleteHandler.addParameters("-D", sourceBranch); // Forçar exclusão com -D
-                GitCommandResult deleteResult = git.runCommand(deleteHandler);
-
-                if (!deleteResult.success()) {
-                    throw new VcsException("Falha ao excluir a branch " + sourceBranch + ": " +
-                            deleteResult.getErrorOutputAsJoinedString());
-                }
-            } catch (VcsException e) {
-                VcsNotifier.getInstance(project).notifyError(
-                        "Git Multi Merge",
-                        "Erro ao deletar branch source: " + e.getMessage(),
-                        "");
-            }
-        }
-
-        // Fetch para atualizar informações das branches - movido para APÓS a deleção de
-        // branches
-        indicator.setText("Atualizando informações das branches (fetch)");
-        try {
-            // Executa um fetch mais completo para garantir a atualização das branches
-            GitLineHandler fetchAllHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.FETCH);
-            fetchAllHandler.addParameters("--all", "--prune");
-            git.runCommand(fetchAllHandler);
-
-            // Força a atualização do repositório no IntelliJ
-            repository.update();
-        } catch (Exception e) {
-            VcsNotifier.getInstance(project).notifyError(
-                    "Git Multi Merge",
-                    "Erro ao executar fetch: " + e.getMessage(),
-                    "");
-        }
-
-        // Notifica o resultado
-        StringBuilder message = new StringBuilder();
-        if (!successfulMerges.isEmpty()) {
-            message.append("Merges realizados com sucesso para: ")
-                    .append(String.join(", ", successfulMerges))
-                    .append("\n");
-        }
-
-        if (!failedMerges.isEmpty()) {
-            message.append("Falha nos merges para: ")
-                    .append(String.join(", ", failedMerges))
-                    .append("\n");
-        }
-
-        if (!pushErrors.isEmpty()) {
-            message.append("\nErros de push:\n")
-                    .append(String.join("\n", pushErrors))
-                    .append("\n");
-        }
-
-        if (!hookErrors.isEmpty()) {
-            message.append("\nErros de hooks:\n")
-                    .append(String.join("\n", hookErrors));
-        }
-
-        if (deleteSource && !successfulMerges.isEmpty() && failedMerges.isEmpty()) {
-            message.append("\nBranch source ").append(sourceBranch)
-                    .append(" foi deletada localmente e no remote (se existia).");
-        }
-
-        if (failedMerges.isEmpty() && hookErrors.isEmpty() && pushErrors.isEmpty()) {
-            VcsNotifier.getInstance(project).notifySuccess(
-                    "Git Multi Merge",
-                    message.toString(),
-                    "");
-        } else {
-            VcsNotifier.getInstance(project).notifyImportantWarning(
-                    "Git Multi Merge",
-                    message.toString(),
-                    "");
-        }
+        super.doOKAction();
     }
 }
