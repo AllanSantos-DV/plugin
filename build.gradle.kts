@@ -44,8 +44,10 @@ tasks {
         archiveClassifier.set("")
     }
     
-    // Garantindo processamento correto dos arquivos de recursos para internacionalização
+    // Configurando o processamento de recursos para internacionalização
     processResources {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+        
         // Garantir que os arquivos de propriedades sejam copiados
         from("src/main/resources") {
             include("**/*.properties")
