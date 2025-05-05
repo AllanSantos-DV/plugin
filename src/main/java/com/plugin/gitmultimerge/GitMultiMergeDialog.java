@@ -1,6 +1,6 @@
 package com.plugin.gitmultimerge;
 
-import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.progress.Task;
@@ -19,10 +19,6 @@ import com.intellij.util.ui.JBUI;
 import com.plugin.gitmultimerge.service.GitMultiMergeService;
 import com.plugin.gitmultimerge.util.MessageBundle;
 import com.plugin.gitmultimerge.util.NotificationHelper;
-import git4idea.commands.Git;
-import git4idea.commands.GitCommand;
-import git4idea.commands.GitCommandResult;
-import git4idea.commands.GitLineHandler;
 import git4idea.repo.GitRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -38,10 +34,11 @@ import java.util.concurrent.CompletableFuture;
  * Usa GitMultiMergeService para implementar operações Git.
  */
 public class GitMultiMergeDialog extends DialogWrapper {
+    private static final Logger LOG = Logger.getInstance(GitMultiMergeDialog.class);
+
     private final Project project;
     private final GitRepository repository;
     private final GitMultiMergeService gitService;
-    private final Git git;
 
     private JComboBox<String> sourceBranchComboBox;
     private JBList<String> targetBranchList;
@@ -62,9 +59,12 @@ public class GitMultiMergeDialog extends DialogWrapper {
         this.gitService = project.getService(GitMultiMergeService.class);
         // Usa o serviço para obter os nomes das branches
         this.allBranchNames = gitService.getBranchNames(repository);
-        this.git = Git.getInstance();
 
         setTitle(MessageBundle.message("dialog.title"));
+
+        // Botão OK inicialmente desativado (até verificarmos se não há alterações)
+        setOKActionEnabled(false);
+
         init();
 
         // Verifica se a branch current tem alterações não commitadas
@@ -200,59 +200,60 @@ public class GitMultiMergeDialog extends DialogWrapper {
     }
 
     /**
-     * Verifica se a branch source selecionada tem alterações não commitadas de forma assíncrona.
+     * Verifica se a branch source selecionada tem alterações não commitadas de
+     * forma assíncrona.
      * Esta abordagem evita bloquear a EDT.
      */
     private void checkSourceBranchUncommittedChangesAsync() {
         String selectedBranch = (String) sourceBranchComboBox.getSelectedItem();
-        if (selectedBranch == null)
+        if (selectedBranch == null) {
+            LOG.info("Branch selecionada é nula, mantendo botão OK desabilitado");
+            setOKActionEnabled(false);
             return;
+        }
 
-        // Desabilita o botão OK temporariamente até a verificação terminar
+        LOG.info("Iniciando verificação para branch: " + selectedBranch);
+
+        // Botão OK começa desabilitado e só é habilitado se não houver alterações
         setOKActionEnabled(false);
         warningLabel.setVisible(false);
 
-        // Verifica se a branch selecionada é a atual
         String currentBranch = repository.getCurrentBranchName();
-        if (currentBranch != null && currentBranch.equals(selectedBranch)) {
-            // Executa a verificação em uma thread em background
-            ApplicationManager.getApplication().executeOnPooledThread(() -> {
-                boolean hasChanges = hasUncommittedChangesNonEDT();
+        LOG.info("Branch atual: " + currentBranch);
 
-                // Volta para a EDT para atualizar a UI
-                ApplicationManager.getApplication().invokeLater(() -> {
-                    if (hasChanges) {
-                        // Mostra mensagem de aviso
-                        warningLabel.setText(MessageBundle.message("error.source.uncommitted.changes.message"));
-                        warningLabel.setVisible(true);
-                        setOKActionEnabled(false);
-                    } else {
-                        // Esconde a mensagem de aviso
-                        warningLabel.setVisible(false);
-                        setOKActionEnabled(true);
-                    }
-                });
-            });
-        } else {
-            // Se não for a branch atual, habilita o botão OK
+        // Se a branch selecionada não for a atual, sempre habilitar o botão
+        // pois não conseguimos verificar alterações em branches não atuais
+        if (!selectedBranch.equals(currentBranch)) {
+            LOG.info("Branch selecionada diferente da atual, habilitando botão OK");
             setOKActionEnabled(true);
+            return;
         }
-    }
 
-    /**
-     * Verifica se há alterações não commitadas no working directory.
-     * Esta função deve ser chamada apenas de uma thread background.
-     *
-     * @return true se existem alterações não commitadas, false se o working
-     *         directory está limpo
-     */
-    private boolean hasUncommittedChangesNonEDT() {
-        GitLineHandler statusHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.STATUS);
-        statusHandler.addParameters("--porcelain");
-        GitCommandResult statusResult = git.runCommand(statusHandler);
+        // Criar um CompletableFuture para a validação
+        CompletableFuture<Boolean> validationFuture = CompletableFuture.supplyAsync(() -> {
+            try {
+                return gitService.hasUncommittedChanges(repository);
+            } catch (Exception e) {
+                LOG.error("Erro ao verificar alterações não commitadas", e);
+                return true; // Em caso de erro, consideramos que há alterações
+            }
+        });
 
-        // Se a saída não estiver vazia, significa que há alterações não commitadas
-        return statusResult.getOutput().stream().anyMatch(line -> !line.trim().isEmpty());
+        // Processar o resultado na EDT
+        validationFuture.thenAcceptAsync(hasChanges -> {
+            if (hasChanges) {
+                LOG.info("Alterações não commitadas encontradas, mostrando aviso e mantendo botão OK desabilitado");
+                // Mostra mensagem de aviso
+                warningLabel.setText(MessageBundle.message("error.source.uncommitted.changes.message"));
+                warningLabel.setVisible(true);
+                setOKActionEnabled(false);
+            } else {
+                LOG.info("Sem alterações não commitadas, ocultando aviso e habilitando botão OK");
+                // Esconde a mensagem de aviso
+                warningLabel.setVisible(false);
+                setOKActionEnabled(true);
+            }
+        }, SwingUtilities::invokeLater);
     }
 
     /**
@@ -291,35 +292,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
             return;
         }
 
-        // Verificação final antes de prosseguir
-        String currentBranch = repository.getCurrentBranchName();
-        if (currentBranch != null && currentBranch.equals(sourceBranch)) {
-            // Executa a verificação em uma task modal para feedback visual
-            ProgressManager.getInstance().run(new Task.Modal(project, MessageBundle.message("progress.checking.changes"), true) {
-                private boolean hasChanges = false;
-
-                @Override
-                public void run(@NotNull ProgressIndicator indicator) {
-                    hasChanges = hasUncommittedChangesNonEDT();
-                }
-
-                @Override
-                public void onSuccess() {
-                    if (hasChanges) {
-                        Messages.showErrorDialog(
-                                project,
-                                MessageBundle.message("error.source.uncommitted.changes.details", sourceBranch),
-                                MessageBundle.message("error.source.uncommitted.changes"));
-                    } else {
-                        // Só prossegue se não houver alterações
-                        continueWithOkAction(sourceBranch, targetBranches);
-                    }
-                }
-            });
-        } else {
-            // Se não for a branch atual, prossegue normalmente
-            continueWithOkAction(sourceBranch, targetBranches);
-        }
+        continueWithOkAction(sourceBranch, targetBranches);
     }
 
     /**

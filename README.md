@@ -22,6 +22,9 @@ Plugin para IntelliJ IDEA que permite realizar o merge de uma branch source para
 - Notificação detalhada dos resultados das operações
 - **Suporte completo a múltiplos idiomas** (Inglês, Português do Brasil e Espanhol)
 - **Detecção automática do idioma do sistema**
+- **Validação assíncrona** de alterações não commitadas
+- **Processamento em background** para melhor performance
+- **Atualizações de UI thread-safe**
 
 ## Requisitos
 
@@ -123,6 +126,7 @@ onde `XX` é o código do idioma (como fr, de, it, etc.).
 
 ## Versões
 
+- **1.2.1**: Validação assíncrona de alterações não commitadas, processamento em background e melhorias de performance
 - **1.2.0**: Suporte completo a internacionalização, interface redesenhada com layout vertical e compatibilidade com Java 17
 - **1.1.0**: Melhorias na interface e correções de bugs
 - **1.0.0**: Versão inicial com funcionalidades básicas
@@ -171,3 +175,4 @@ Para dúvidas ou sugestões, entre em contato com o desenvolvedor através do e-
         }
     }
 ```
+

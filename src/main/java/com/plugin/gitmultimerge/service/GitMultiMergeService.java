@@ -2,6 +2,7 @@ package com.plugin.gitmultimerge.service;
 
 import com.intellij.openapi.progress.ProgressIndicator;
 import git4idea.repo.GitRepository;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -44,4 +45,12 @@ public interface GitMultiMergeService {
             boolean deleteSourceBranch,
             String commitMessage,
             ProgressIndicator indicator);
+
+    /**
+     * Verifica se há alterações não commitadas no working directory
+     *
+     * @return true se existem alterações não commitadas, false se o working
+     *         directory está limpo
+     */
+    boolean hasUncommittedChanges(@NotNull GitRepository repository);
 }

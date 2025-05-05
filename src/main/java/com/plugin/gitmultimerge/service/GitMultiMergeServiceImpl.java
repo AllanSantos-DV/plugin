@@ -314,7 +314,8 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
      * @return true se existem alterações não commitadas, false se o working
      *         directory está limpo
      */
-    private boolean hasUncommittedChanges(@NotNull GitRepository repository) {
+    @Override
+    public boolean hasUncommittedChanges(@NotNull GitRepository repository) {
         GitLineHandler statusHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.STATUS);
         statusHandler.addParameters("--porcelain");
         GitCommandResult statusResult = git.runCommand(statusHandler);

@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>com.plugin.gitmultimerge</id>
     <name>Git Multi Merge</name>
-    <version>1.2.0</version>
+    <version>1.2.1</version>
     <vendor email="allannascimentodossantos@gmail.com" url="https://github.com/AllanSantos-DV/plugin">Allan Santos</vendor>
 
     <description><![CDATA[
@@ -24,6 +24,14 @@
     ]]></description>
     
     <change-notes><![CDATA[
+    <h3>Versão 1.2.1</h3>
+    <ul>
+        <li><b>MELHORADO:</b> Validação assíncrona de alterações não commitadas</li>
+        <li><b>MELHORADO:</b> Processamento em background para melhor performance</li>
+        <li><b>MELHORADO:</b> Tratamento de erros mais robusto</li>
+        <li><b>MELHORADO:</b> Atualizações de UI thread-safe</li>
+    </ul>
+
     <h3>Versão 1.2.0</h3>
     <ul>
         <li><b>NOVO:</b> Internacionalização completa do plugin</li>
