@@ -85,8 +85,6 @@
         <!-- Definição da ação principal -->
         <action id="GitMultiMerge.Action" 
                 class="com.plugin.gitmultimerge.GitMultiMergeAction"
-                text="action.GitMultiMerge.text" 
-                description="action.GitMultiMerge.description"
                 icon="/icons/multiMerge.svg">
             <!-- Grupos corretos conforme documentação 2025 -->
             <add-to-group group-id="VersionControlsGroup" anchor="after" relative-to-action="CheckinProject"/>
