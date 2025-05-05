@@ -37,7 +37,7 @@
         <li><b>MELHORADO:</b> Documentação para desenvolvimento e uso</li>
         <li><b>CORRIGIDO:</b> Compatibilidade com IntelliJ IDEA 2023.1 e Java 17</li>
     </ul>
-
+    
     <h3>Versão 1.1.0</h3>
     <ul>
         <li><b>NOVO:</b> Interface aprimorada com ComboBox para seleção de branch source</li>
@@ -70,26 +70,26 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- Registro do serviço que implementa a lógica de negócio -->
-        <projectService serviceInterface="com.plugin.gitmultimerge.service.GitMultiMergeService"
+        <projectService serviceInterface="com.plugin.gitmultimerge.service.GitMultiMergeService" 
                         serviceImplementation="com.plugin.gitmultimerge.service.GitMultiMergeServiceImpl"/>
-
+        
         <!-- Grupo de notificações para o plugin -->
-        <notificationGroup id="Git Multi Merge"
-                          displayType="BALLOON"
-                          toolWindowId="Version Control"
+        <notificationGroup id="Git Multi Merge" 
+                          displayType="BALLOON" 
+                          toolWindowId="Version Control" 
                           bundle="messages.GitMultiMergeBundle"
                           key="notification.group.git.multi.merge"/>
     </extensions>
 
     <actions>
         <!-- Definição da ação principal -->
-        <action id="GitMultiMerge.Action"
+        <action id="GitMultiMerge.Action" 
                 class="com.plugin.gitmultimerge.GitMultiMergeAction"
                 icon="/icons/multiMerge.svg">
             <!-- Grupos corretos conforme documentação 2025 -->
             <add-to-group group-id="VersionControlsGroup" anchor="after" relative-to-action="CheckinProject"/>
             <add-to-group group-id="ChangesViewToolbar" anchor="after" relative-to-action="CheckinProject"/>
-
+            
             <!-- Grupos padrão que são estáveis entre versões -->
             <add-to-group group-id="Git.Menu" anchor="after" relative-to-action="Git.Merge"/>
             <add-to-group group-id="VcsGroup" anchor="last"/>
