@@ -45,6 +45,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
     private JBTextField mergeCommitMessageField;
     private DefaultListModel<String> targetListModel;
     private final List<String> allBranchNames;
+    private JBLabel warningLabel; // Novo label para mostrar aviso de alterações não commitadas
 
     public GitMultiMergeDialog(@NotNull Project project, @NotNull GitRepository repository) {
         super(project);
@@ -57,6 +58,9 @@ public class GitMultiMergeDialog extends DialogWrapper {
 
         setTitle(MessageBundle.message("dialog.title"));
         init();
+
+        // Verifica se a branch current tem alterações não commitadas
+        checkSourceBranchUncommittedChanges();
     }
 
     @Nullable
@@ -83,6 +87,12 @@ public class GitMultiMergeDialog extends DialogWrapper {
             sourceBranchComboBox.setSelectedItem(currentBranch);
         }
         sourcePanel.add(sourceBranchComboBox, BorderLayout.CENTER);
+
+        // Adiciona o label de aviso de alterações não commitadas
+        warningLabel = new JBLabel();
+        warningLabel.setForeground(Color.RED);
+        warningLabel.setVisible(false);
+        sourcePanel.add(warningLabel, BorderLayout.SOUTH);
 
         c.weighty = 0;
         panel.add(sourcePanel, c);
@@ -119,7 +129,10 @@ public class GitMultiMergeDialog extends DialogWrapper {
         });
 
         // Adicionar listener para o combobox de source
-        sourceBranchComboBox.addActionListener(e -> updateTargetList());
+        sourceBranchComboBox.addActionListener(e -> {
+            updateTargetList();
+            checkSourceBranchUncommittedChanges();
+        });
 
         // Limite a seleção para no máximo 5 branches target
         targetBranchList.addListSelectionListener(e -> {
@@ -179,6 +192,50 @@ public class GitMultiMergeDialog extends DialogWrapper {
     }
 
     /**
+     * Verifica se a branch source selecionada tem alterações não commitadas.
+     * Se tiver, desabilita o botão de OK (merge) e mostra uma mensagem de aviso.
+     */
+    private void checkSourceBranchUncommittedChanges() {
+        String selectedBranch = (String) sourceBranchComboBox.getSelectedItem();
+        if (selectedBranch == null)
+            return;
+
+        // Verifica se a branch selecionada é a atual
+        String currentBranch = repository.getCurrentBranchName();
+        if (currentBranch != null && currentBranch.equals(selectedBranch)) {
+            // Se for a branch atual, verifica se tem alterações não commitadas
+            boolean hasUncommittedChanges = hasUncommittedChanges();
+
+            if (hasUncommittedChanges) {
+                // Desabilita o botão OK (merge)
+                setOKActionEnabled(false);
+
+                // Mostra mensagem de aviso
+                warningLabel.setText(MessageBundle.message("error.source.uncommitted.changes.message"));
+                warningLabel.setVisible(true);
+            } else {
+                // Habilita o botão OK (merge)
+                setOKActionEnabled(true);
+
+                // Esconde a mensagem de aviso
+                warningLabel.setVisible(false);
+            }
+        } else {
+            // Se não for a branch atual, não podemos verificar alterações não commitadas
+            // então apenas habilitamos o botão OK
+            setOKActionEnabled(true);
+            warningLabel.setVisible(false);
+        }
+    }
+
+    /**
+     * Verifica se há alterações não commitadas no working directory
+     */
+    private boolean hasUncommittedChanges() {
+        return repository.getStatus().hasChanges();
+    }
+
+    /**
      * Atualiza a lista de branches target com base na branch source selecionada e
      * texto de busca.
      */
@@ -200,6 +257,16 @@ public class GitMultiMergeDialog extends DialogWrapper {
 
     @Override
     protected void doOKAction() {
+        // Verificação final de alterações não commitadas na branch source
+        if (hasUncommittedChanges()) {
+            String sourceBranch = (String) sourceBranchComboBox.getSelectedItem();
+            Messages.showErrorDialog(
+                    project,
+                    MessageBundle.message("error.source.uncommitted.changes.details", sourceBranch),
+                    MessageBundle.message("error.source.uncommitted.changes"));
+            return;
+        }
+
         // Validação de entrada
         String sourceBranch = (String) sourceBranchComboBox.getSelectedItem();
         List<String> targetBranches = targetBranchList.getSelectedValuesList();
