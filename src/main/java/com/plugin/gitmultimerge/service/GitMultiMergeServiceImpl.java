@@ -291,10 +291,12 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
         boolean hasChanges = diffResult.getOutput().stream().anyMatch(line -> !line.trim().isEmpty());
 
         // Se não houver alterações, apenas retorna sucesso sem fazer squash
-        if (!hasChanges && squash) {
-            GitCommandResult emptyResult = new GitCommandResult(true, 0,
-                    List.of("Already up to date. No changes to squash."), List.of());
-            return emptyResult;
+        if (!hasChanges) {
+            // Criando um resultado de sucesso com uma mensagem informativa
+            // Note que colocamos a mensagem apenas na saída normal, não na saída de erro
+            return new GitCommandResult(true, 0,
+                    List.of("Already up to date"),
+                    List.of());
         }
 
         // Processo normal de merge
@@ -310,7 +312,7 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
 
         // Se foi com squash e deu sucesso, e temos alterações, precisamos fazer o
         // commit
-        if (squash && result.success() && hasChanges) {
+        if (squash && result.success()) {
             GitLineHandler commitHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.COMMIT);
             commitHandler.addParameters("--no-edit");
 
