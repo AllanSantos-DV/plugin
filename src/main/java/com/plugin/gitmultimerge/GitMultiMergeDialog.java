@@ -68,35 +68,31 @@ public class GitMultiMergeDialog extends DialogWrapper {
         // Configuração do painel principal
         c.fill = GridBagConstraints.BOTH;
         c.insets = JBUI.insets(5);
-
-        // ComboBox de branch source
         c.gridx = 0;
         c.gridy = 0;
-        c.gridwidth = 1;
-        c.weightx = 0.5;
-        c.weighty = 0;
-        panel.add(new JBLabel(MessageBundle.message("source.branch.label")), c);
+        c.weightx = 1.0; // Ocupar toda a largura horizontal
 
-        c.gridy = 1;
-        c.weighty = 0.1;
+        // ComboBox de branch source
+        JPanel sourcePanel = new JPanel(new BorderLayout(0, 5));
+        sourcePanel.add(new JBLabel(MessageBundle.message("source.branch.label")), BorderLayout.NORTH);
+
         sourceBranchComboBox = new ComboBox<>(allBranchNames.toArray(new String[0]));
-
         // Tentar selecionar a branch atual
         String currentBranch = repository.getCurrentBranchName();
         if (currentBranch != null) {
             sourceBranchComboBox.setSelectedItem(currentBranch);
         }
+        sourcePanel.add(sourceBranchComboBox, BorderLayout.CENTER);
 
-        panel.add(sourceBranchComboBox, c);
+        c.weighty = 0;
+        panel.add(sourcePanel, c);
 
         // Lista de branches target com campo de busca
-        c.gridx = 1;
-        c.gridy = 0;
-        c.weighty = 0;
-        panel.add(new JBLabel(MessageBundle.message("target.branches.label")), c);
-
         c.gridy = 1;
-        c.weighty = 1.0;
+        c.weighty = 1.0; // Dar mais espaço vertical para a lista de targets (aumentado)
+
+        JPanel targetMainPanel = new JPanel(new BorderLayout(0, 5));
+        targetMainPanel.add(new JBLabel(MessageBundle.message("target.branches.label")), BorderLayout.NORTH);
 
         // Painel para a lista de targets com campo de busca
         JPanel targetPanel = new JPanel(new BorderLayout(0, 5));
@@ -135,36 +131,49 @@ public class GitMultiMergeDialog extends DialogWrapper {
 
         JBScrollPane targetScrollPane = new JBScrollPane(targetBranchList);
         targetPanel.add(targetScrollPane, BorderLayout.CENTER);
-        panel.add(targetPanel, c);
+        targetMainPanel.add(targetPanel, BorderLayout.CENTER);
 
-        // Opções adicionais
-        JPanel optionsPanel = new JPanel(new GridLayout(4, 1, 5, 5));
+        panel.add(targetMainPanel, c);
 
+        // Opções adicionais - Agora mais compactas
+        JPanel optionsPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints optConstraints = new GridBagConstraints();
+        optConstraints.fill = GridBagConstraints.HORIZONTAL;
+        optConstraints.weightx = 1.0;
+        optConstraints.gridx = 0;
+        optConstraints.insets = JBUI.insets(2); // Espaçamento reduzido
+
+        // Checkboxes mais compactos
         squashCheckBox = new JBCheckBox(MessageBundle.message("options.squash.commits"));
+        optConstraints.gridy = 0;
+        optionsPanel.add(squashCheckBox, optConstraints);
+
         deleteSourceCheckBox = new JBCheckBox(MessageBundle.message("options.delete.branch.after"));
+        optConstraints.gridy = 1;
+        optionsPanel.add(deleteSourceCheckBox, optConstraints);
+
         pushAfterMergeCheckBox = new JBCheckBox(MessageBundle.message("options.push.after.merge"));
         pushAfterMergeCheckBox.setSelected(true); // Habilitado por padrão
+        optConstraints.gridy = 2;
+        optionsPanel.add(pushAfterMergeCheckBox, optConstraints);
 
         // Painel para mensagem de commit
-        JPanel commitMessagePanel = new JPanel(new BorderLayout(5, 5));
+        JPanel commitMessagePanel = new JPanel(new BorderLayout(5, 2));
         commitMessagePanel.add(new JBLabel(MessageBundle.message("options.commit.message")), BorderLayout.NORTH);
         mergeCommitMessageField = new JBTextField();
         mergeCommitMessageField.setEnabled(true);
         commitMessagePanel.add(mergeCommitMessageField, BorderLayout.CENTER);
 
-        optionsPanel.add(squashCheckBox);
-        optionsPanel.add(deleteSourceCheckBox);
-        optionsPanel.add(pushAfterMergeCheckBox);
-        optionsPanel.add(commitMessagePanel);
+        optConstraints.gridy = 3;
+        optConstraints.insets = JBUI.insets(5, 2, 2, 2); // Adiciona um pouco mais de espaço acima
+        optionsPanel.add(commitMessagePanel, optConstraints);
 
-        c.gridx = 0;
         c.gridy = 2;
-        c.gridwidth = 2;
         c.weighty = 0;
         panel.add(optionsPanel, c);
 
-        // Tamanho do diálogo
-        panel.setPreferredSize(new Dimension(600, 400));
+        // Tamanho do diálogo - agora mais estreito e mais alto
+        panel.setPreferredSize(new Dimension(450, 550));
 
         return panel;
     }
