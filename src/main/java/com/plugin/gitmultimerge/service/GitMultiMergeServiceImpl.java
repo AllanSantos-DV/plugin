@@ -281,6 +281,23 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
      */
     private GitCommandResult merge(@NotNull GitRepository repository, @NotNull String sourceBranch,
             boolean squash, String commitMessage) {
+        // Primeiro, verifica se há alterações para mesclar
+        GitLineHandler diffHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.DIFF);
+        diffHandler.addParameters(sourceBranch, "--name-only");
+        GitCommandResult diffResult = git.runCommand(diffHandler);
+
+        // Se não houver diferenças e squash estiver ativado,
+        // retorna sucesso sem tentar fazer squash
+        boolean hasChanges = diffResult.getOutput().stream().anyMatch(line -> !line.trim().isEmpty());
+
+        // Se não houver alterações, apenas retorna sucesso sem fazer squash
+        if (!hasChanges && squash) {
+            GitCommandResult emptyResult = new GitCommandResult(true, 0,
+                    List.of("Already up to date. No changes to squash."), List.of());
+            return emptyResult;
+        }
+
+        // Processo normal de merge
         GitLineHandler handler = new GitLineHandler(project, repository.getRoot(), GitCommand.MERGE);
 
         if (squash) {
@@ -291,8 +308,9 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
 
         GitCommandResult result = git.runCommand(handler);
 
-        // Se foi com squash e deu sucesso, precisamos fazer o commit
-        if (squash && result.success()) {
+        // Se foi com squash e deu sucesso, e temos alterações, precisamos fazer o
+        // commit
+        if (squash && result.success() && hasChanges) {
             GitLineHandler commitHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.COMMIT);
             commitHandler.addParameters("--no-edit");
 
