@@ -8,6 +8,7 @@ import com.intellij.openapi.ui.ComboBox;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.ui.DocumentAdapter;
+import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBCheckBox;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.JBList;
@@ -17,6 +18,10 @@ import com.intellij.util.ui.JBUI;
 import com.plugin.gitmultimerge.service.GitMultiMergeService;
 import com.plugin.gitmultimerge.util.MessageBundle;
 import com.plugin.gitmultimerge.util.NotificationHelper;
+import git4idea.commands.Git;
+import git4idea.commands.GitCommand;
+import git4idea.commands.GitCommandResult;
+import git4idea.commands.GitLineHandler;
 import git4idea.repo.GitRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -35,6 +40,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
     private final Project project;
     private final GitRepository repository;
     private final GitMultiMergeService gitService;
+    private final Git git;
 
     private JComboBox<String> sourceBranchComboBox;
     private JBList<String> targetBranchList;
@@ -55,6 +61,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
         this.gitService = project.getService(GitMultiMergeService.class);
         // Usa o serviço para obter os nomes das branches
         this.allBranchNames = gitService.getBranchNames(repository);
+        this.git = Git.getInstance();
 
         setTitle(MessageBundle.message("dialog.title"));
         init();
@@ -90,7 +97,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
 
         // Adiciona o label de aviso de alterações não commitadas
         warningLabel = new JBLabel();
-        warningLabel.setForeground(Color.RED);
+        warningLabel.setForeground(JBColor.RED);
         warningLabel.setVisible(false);
         sourcePanel.add(warningLabel, BorderLayout.SOUTH);
 
@@ -230,9 +237,17 @@ public class GitMultiMergeDialog extends DialogWrapper {
 
     /**
      * Verifica se há alterações não commitadas no working directory
+     *
+     * @return true se existem alterações não commitadas, false se o working
+     *         directory está limpo
      */
     private boolean hasUncommittedChanges() {
-        return repository.getStatus().hasChanges();
+        GitLineHandler statusHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.STATUS);
+        statusHandler.addParameters("--porcelain");
+        GitCommandResult statusResult = git.runCommand(statusHandler);
+
+        // Se a saída não estiver vazia, significa que há alterações não commitadas
+        return statusResult.getOutput().stream().anyMatch(line -> !line.trim().isEmpty());
     }
 
     /**
@@ -257,16 +272,6 @@ public class GitMultiMergeDialog extends DialogWrapper {
 
     @Override
     protected void doOKAction() {
-        // Verificação final de alterações não commitadas na branch source
-        if (hasUncommittedChanges()) {
-            String sourceBranch = (String) sourceBranchComboBox.getSelectedItem();
-            Messages.showErrorDialog(
-                    project,
-                    MessageBundle.message("error.source.uncommitted.changes.details", sourceBranch),
-                    MessageBundle.message("error.source.uncommitted.changes"));
-            return;
-        }
-
         // Validação de entrada
         String sourceBranch = (String) sourceBranchComboBox.getSelectedItem();
         List<String> targetBranches = targetBranchList.getSelectedValuesList();
@@ -274,6 +279,12 @@ public class GitMultiMergeDialog extends DialogWrapper {
         if (sourceBranch == null) {
             Messages.showErrorDialog(project, MessageBundle.message("error.no.source"),
                     MessageBundle.message("dialog.title"));
+            return;
+        } else if (hasUncommittedChanges()) {
+            Messages.showErrorDialog(
+                    project,
+                    MessageBundle.message("error.source.uncommitted.changes.details", sourceBranch),
+                    MessageBundle.message("error.source.uncommitted.changes"));
             return;
         }
 

@@ -24,8 +24,7 @@ public class GitMultiMergeAction extends AnAction implements DumbAware {
      * A apresentação será configurada no método update.
      */
     public GitMultiMergeAction() {
-        // A apresentação será configurada no método update para compatibilidade com
-        // 2025
+        // A apresentação será configurada no método update para compatibilidade com 2025
     }
 
     @Override
