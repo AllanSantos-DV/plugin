@@ -17,6 +17,7 @@
         <li><b>Atualização Inteligente:</b> Fetch automático com prune para manter seu repositório atualizado</li>
         <li><b>Feedback Detalhado:</b> Visualização em tempo real do progresso e notificações completas</li>
         <li><b>Multilíngue:</b> Suporte completo para Inglês, Português do Brasil e Espanhol</li>
+        <li><b>Interface Otimizada:</b> Layout vertical com foco na seleção de branches target</li>
     </ul>
     
     <p>Economize tempo e evite erros em operações repetitivas de merge. Perfeito para equipes que trabalham com múltiplas branches de feature e releases.</p>
@@ -28,6 +29,10 @@
         <li><b>NOVO:</b> Internacionalização completa do plugin</li>
         <li><b>NOVO:</b> Suporte para múltiplos idiomas (Inglês, Português do Brasil, Espanhol)</li>
         <li><b>NOVO:</b> Detecção automática do idioma do usuário</li>
+        <li><b>NOVO:</b> Interface com layout vertical para melhor usabilidade</li>
+        <li><b>MELHORADO:</b> Aumento do espaço para visualização das branches target</li>
+        <li><b>MELHORADO:</b> Organização mais compacta das opções e controles</li>
+        <li><b>MELHORADO:</b> Dimensões otimizadas da janela de diálogo (450x550)</li>
         <li><b>MELHORADO:</b> Arquitetura interna para melhor organização</li>
         <li><b>MELHORADO:</b> Documentação para desenvolvimento e uso</li>
         <li><b>CORRIGIDO:</b> Compatibilidade com IntelliJ IDEA 2023.1 e Java 17</li>
@@ -80,6 +85,8 @@
         <!-- Definição da ação principal -->
         <action id="GitMultiMerge.Action" 
                 class="com.plugin.gitmultimerge.GitMultiMergeAction"
+                text="action.GitMultiMerge.text" 
+                description="action.GitMultiMerge.description"
                 icon="/icons/multiMerge.svg">
             <!-- Grupos corretos conforme documentação 2025 -->
             <add-to-group group-id="VersionControlsGroup" anchor="after" relative-to-action="CheckinProject"/>
