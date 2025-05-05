@@ -122,6 +122,29 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
                 indicator.setText(MessageBundle.message("progress.processing", targetBranch));
                 indicator.setFraction(currentStep / totalSteps);
 
+                // 0. Verifica se há alterações não commitadas no working directory
+                boolean hasUncommittedChanges = hasUncommittedChanges(repository);
+                if (hasUncommittedChanges) {
+                    // Mostra uma mensagem de erro específica para squash, se aplicável
+                    if (squash) {
+                        NotificationHelper.notifyError(
+                                project,
+                                NotificationHelper.DEFAULT_TITLE,
+                                MessageBundle.message("error.uncommitted.changes.squash", targetBranch));
+                    } else {
+                        NotificationHelper.notifyError(
+                                project,
+                                NotificationHelper.DEFAULT_TITLE,
+                                MessageBundle.message("error.uncommitted.changes.details", targetBranch));
+                    }
+
+                    allSuccessful = false;
+                    failedMerges.add(targetBranch);
+                    // Não continua para o checkout/merge desta branch
+                    currentStep++;
+                    continue;
+                }
+
                 // 1. Checkout na branch target
                 GitCommandResult checkoutResult = checkout(repository, targetBranch);
                 if (!checkoutResult.success()) {
@@ -283,6 +306,21 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
                     e);
             future.complete(false);
         }
+    }
+
+    /**
+     * Verifica se há alterações não commitadas no working directory
+     * 
+     * @return true se existem alterações não commitadas, false se o working
+     *         directory está limpo
+     */
+    private boolean hasUncommittedChanges(@NotNull GitRepository repository) {
+        GitLineHandler statusHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.STATUS);
+        statusHandler.addParameters("--porcelain");
+        GitCommandResult statusResult = git.runCommand(statusHandler);
+
+        // Se a saída não estiver vazia, significa que há alterações não commitadas
+        return statusResult.getOutput().stream().anyMatch(line -> !line.trim().isEmpty());
     }
 
     /**
