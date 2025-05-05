@@ -4,6 +4,7 @@ import com.intellij.openapi.components.Service;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.project.Project;
 import com.plugin.gitmultimerge.util.NotificationHelper;
+import com.plugin.gitmultimerge.util.MessageBundle;
 import git4idea.GitLocalBranch;
 import git4idea.GitRemoteBranch;
 import git4idea.commands.*;
@@ -94,7 +95,7 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
         try {
             // Inicializa o indicador de progresso
             indicator.setIndeterminate(false);
-            indicator.setText("Preparando operação de merge...");
+            indicator.setText(MessageBundle.message("progress.preparing"));
             indicator.setFraction(0.0);
 
             // Salva a branch atual para retornar a ela depois
@@ -103,7 +104,7 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
                 NotificationHelper.notifyError(
                         project,
                         NotificationHelper.DEFAULT_TITLE,
-                        "Não foi possível determinar a branch atual");
+                        MessageBundle.message("error.no.source"));
                 future.complete(false);
                 return;
             }
@@ -118,7 +119,7 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
 
             // Para cada branch target
             for (String targetBranch : targetBranches) {
-                indicator.setText("Processando merge para " + targetBranch);
+                indicator.setText(MessageBundle.message("progress.processing", targetBranch));
                 indicator.setFraction(currentStep / totalSteps);
 
                 // 1. Checkout na branch target
@@ -127,8 +128,8 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
                     NotificationHelper.notifyError(
                             project,
                             NotificationHelper.DEFAULT_TITLE,
-                            "Falha ao fazer checkout para " + targetBranch + ":\n" +
-                                    String.join("\n", checkoutResult.getErrorOutput()));
+                            MessageBundle.message("error.checkout", targetBranch,
+                                    String.join("\n", checkoutResult.getErrorOutput())));
                     allSuccessful = false;
                     failedMerges.add(targetBranch);
                     continue;
@@ -140,8 +141,8 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
                     NotificationHelper.notifyError(
                             project,
                             NotificationHelper.DEFAULT_TITLE,
-                            "Falha ao fazer merge de " + sourceBranch + " para " + targetBranch + ":\n" +
-                                    String.join("\n", mergeResult.getErrorOutput()));
+                            MessageBundle.message("error.merge", sourceBranch, targetBranch,
+                                    String.join("\n", mergeResult.getErrorOutput())));
                     allSuccessful = false;
                     failedMerges.add(targetBranch);
                     continue;
@@ -151,14 +152,14 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
 
                 // 3. Push se necessário
                 if (pushAfterMerge) {
-                    indicator.setText("Fazendo push de " + targetBranch);
+                    indicator.setText(MessageBundle.message("progress.pushing", targetBranch));
                     GitCommandResult pushResult = push(repository, targetBranch);
                     if (!pushResult.success()) {
                         NotificationHelper.notifyWarning(
                                 project,
                                 NotificationHelper.DEFAULT_TITLE,
-                                "Falha ao fazer push de " + targetBranch + ":\n" +
-                                        String.join("\n", pushResult.getErrorOutput()));
+                                MessageBundle.message("error.push", targetBranch,
+                                        String.join("\n", pushResult.getErrorOutput())));
                         // Não vamos falhar todo o processo apenas por causa do push
                     }
                 }
@@ -167,7 +168,7 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
             }
 
             // Volta para a branch original
-            indicator.setText("Retornando para a branch original...");
+            indicator.setText(MessageBundle.message("progress.returning"));
             indicator.setFraction(currentStep / totalSteps);
 
             GitCommandResult returnResult = checkout(repository, originalBranch);
@@ -175,21 +176,21 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
                 NotificationHelper.notifyError(
                         project,
                         NotificationHelper.DEFAULT_TITLE,
-                        "Falha ao retornar para a branch original " + originalBranch + ":\n" +
-                                String.join("\n", returnResult.getErrorOutput()));
+                        MessageBundle.message("error.return", originalBranch,
+                                String.join("\n", returnResult.getErrorOutput())));
                 allSuccessful = false;
             }
 
             // 4. Deletar branch source se necessário
             if (deleteSourceBranch && allSuccessful) {
-                indicator.setText("Deletando branch source...");
+                indicator.setText(MessageBundle.message("progress.deleting.source"));
 
                 // Verificar se podemos usar a branch atual
                 if (originalBranch.equals(sourceBranch)) {
                     NotificationHelper.notifyWarning(
                             project,
                             NotificationHelper.DEFAULT_TITLE,
-                            "Não é possível deletar a branch " + sourceBranch + " pois é a branch atual.");
+                            MessageBundle.message("error.current.branch", sourceBranch));
                 } else {
                     // Verifica se há uma branch remota correspondente
                     GitRemoteBranch remoteBranch = findRemoteBranch(repository, sourceBranch);
@@ -200,8 +201,8 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
                         NotificationHelper.notifyWarning(
                                 project,
                                 NotificationHelper.DEFAULT_TITLE,
-                                "Falha ao deletar a branch source " + sourceBranch + ":\n" +
-                                        String.join("\n", deleteResult.getErrorOutput()));
+                                MessageBundle.message("error.delete.source", sourceBranch,
+                                        String.join("\n", deleteResult.getErrorOutput())));
                     } else if (remoteBranch != null) {
                         // Se tem branch remota, deleta ela também
                         GitCommandResult deleteRemoteResult = deleteRemoteBranch(repository, remoteBranch);
@@ -209,16 +210,16 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
                             NotificationHelper.notifyWarning(
                                     project,
                                     NotificationHelper.DEFAULT_TITLE,
-                                    "Falha ao deletar a branch remota " + remoteBranch.getNameForRemoteOperations()
-                                            + ":\n" +
-                                            String.join("\n", deleteRemoteResult.getErrorOutput()));
+                                    MessageBundle.message("error.delete.remote",
+                                            remoteBranch.getNameForRemoteOperations(),
+                                            String.join("\n", deleteRemoteResult.getErrorOutput())));
                         }
                     }
                 }
             }
 
             // Finaliza o progresso
-            indicator.setText("Atualizando referências Git...");
+            indicator.setText(MessageBundle.message("progress.updating.refs"));
 
             // Executar fetch para atualizar referências
             GitLineHandler fetchHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.FETCH);
@@ -228,20 +229,22 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
             // Forçar atualização do repositório
             repository.update();
 
-            indicator.setText("Operação concluída");
+            indicator.setText(MessageBundle.message("progress.completed"));
             indicator.setFraction(1.0);
 
             // Notificar resultados
             StringBuilder summary = new StringBuilder();
 
             if (!successfulMerges.isEmpty()) {
-                summary.append("Merges bem-sucedidos: ").append(String.join(", ", successfulMerges));
+                summary.append(MessageBundle.message("summary.successful.merges",
+                        String.join(", ", successfulMerges)));
             }
 
             if (!failedMerges.isEmpty()) {
                 if (!summary.isEmpty())
                     summary.append("\n\n");
-                summary.append("Merges com falha: ").append(String.join(", ", failedMerges));
+                summary.append(MessageBundle.message("summary.failed.merges",
+                        String.join(", ", failedMerges)));
             }
 
             if (allSuccessful) {
@@ -292,10 +295,9 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
 
         // Se não houver alterações, apenas retorna sucesso sem fazer squash
         if (!hasChanges) {
-            // Criando um resultado de sucesso com uma mensagem informativa
-            // Note que colocamos a mensagem apenas na saída normal, não na saída de erro
+            // Criando um resultado de sucesso com mensagem internacionalizada
             return new GitCommandResult(true, 0,
-                    List.of("Already up to date"),
+                    List.of(MessageBundle.message("branch.already.up.to.date")),
                     List.of());
         }
 
@@ -310,8 +312,7 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
 
         GitCommandResult result = git.runCommand(handler);
 
-        // Se foi com squash e deu sucesso, e temos alterações, precisamos fazer o
-        // commit
+        // Se foi com squash e deu sucesso, precisamos fazer o commit
         if (squash && result.success()) {
             GitLineHandler commitHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.COMMIT);
             commitHandler.addParameters("--no-edit");

@@ -205,18 +205,21 @@ public class GitMultiMergeDialog extends DialogWrapper {
         List<String> targetBranches = targetBranchList.getSelectedValuesList();
 
         if (sourceBranch == null) {
-            Messages.showErrorDialog(project, "Selecione uma branch source", "Erro");
+            Messages.showErrorDialog(project, MessageBundle.message("error.no.source"),
+                    MessageBundle.message("dialog.title"));
             return;
         }
 
         if (targetBranches.isEmpty()) {
-            Messages.showErrorDialog(project, "Selecione pelo menos uma branch target", "Erro");
+            Messages.showErrorDialog(project, MessageBundle.message("error.no.targets"),
+                    MessageBundle.message("dialog.title"));
             return;
         }
 
         if (targetBranches.contains(sourceBranch)) {
             Messages.showErrorDialog(project,
-                    "A branch source não pode ser selecionada como target", "Erro");
+                    MessageBundle.message("error.branch.protected", sourceBranch),
+                    MessageBundle.message("dialog.title"));
             return;
         }
 
@@ -227,27 +230,28 @@ public class GitMultiMergeDialog extends DialogWrapper {
         String mergeMessage = mergeCommitMessageField.getText();
 
         // Inicia o processo de merge em background com barra de progresso
-        ProgressManager.getInstance().run(new Task.Backgroundable(project, "Git multi merge", true) {
-            @Override
-            public void run(@NotNull ProgressIndicator indicator) {
-                // Usa o serviço GitMultiMergeService para executar o merge
-                CompletableFuture<Boolean> future = gitService.performMerge(
-                        repository,
-                        sourceBranch,
-                        targetBranches,
-                        squash,
-                        pushAfterMerge,
-                        deleteSource,
-                        mergeMessage,
-                        indicator);
+        ProgressManager.getInstance()
+                .run(new Task.Backgroundable(project, MessageBundle.message("dialog.title"), true) {
+                    @Override
+                    public void run(@NotNull ProgressIndicator indicator) {
+                        // Usa o serviço GitMultiMergeService para executar o merge
+                        CompletableFuture<Boolean> future = gitService.performMerge(
+                                repository,
+                                sourceBranch,
+                                targetBranches,
+                                squash,
+                                pushAfterMerge,
+                                deleteSource,
+                                mergeMessage,
+                                indicator);
 
-                future.exceptionally(throwable -> {
-                    // Tratamento de erro simplificado
-                    NotificationHelper.notifyError(project, NotificationHelper.DEFAULT_TITLE, throwable);
-                    return false;
+                        future.exceptionally(throwable -> {
+                            // Tratamento de erro simplificado
+                            NotificationHelper.notifyError(project, NotificationHelper.DEFAULT_TITLE, throwable);
+                            return false;
+                        });
+                    }
                 });
-            }
-        });
 
         super.doOKAction();
     }
