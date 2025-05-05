@@ -1,5 +1,6 @@
 package com.plugin.gitmultimerge;
 
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.progress.Task;
@@ -67,7 +68,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
         init();
 
         // Verifica se a branch current tem alterações não commitadas
-        checkSourceBranchUncommittedChanges();
+        checkSourceBranchUncommittedChangesAsync();
     }
 
     @Nullable
@@ -138,7 +139,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
         // Adicionar listener para o combobox de source
         sourceBranchComboBox.addActionListener(e -> {
             updateTargetList();
-            checkSourceBranchUncommittedChanges();
+            checkSourceBranchUncommittedChangesAsync();
         });
 
         // Limite a seleção para no máximo 5 branches target
@@ -199,49 +200,53 @@ public class GitMultiMergeDialog extends DialogWrapper {
     }
 
     /**
-     * Verifica se a branch source selecionada tem alterações não commitadas.
-     * Se tiver, desabilita o botão de OK (merge) e mostra uma mensagem de aviso.
+     * Verifica se a branch source selecionada tem alterações não commitadas de forma assíncrona.
+     * Esta abordagem evita bloquear a EDT.
      */
-    private void checkSourceBranchUncommittedChanges() {
+    private void checkSourceBranchUncommittedChangesAsync() {
         String selectedBranch = (String) sourceBranchComboBox.getSelectedItem();
         if (selectedBranch == null)
             return;
 
+        // Desabilita o botão OK temporariamente até a verificação terminar
+        setOKActionEnabled(false);
+        warningLabel.setVisible(false);
+
         // Verifica se a branch selecionada é a atual
         String currentBranch = repository.getCurrentBranchName();
         if (currentBranch != null && currentBranch.equals(selectedBranch)) {
-            // Se for a branch atual, verifica se tem alterações não commitadas
-            boolean hasUncommittedChanges = hasUncommittedChanges();
+            // Executa a verificação em uma thread em background
+            ApplicationManager.getApplication().executeOnPooledThread(() -> {
+                boolean hasChanges = hasUncommittedChangesNonEDT();
 
-            if (hasUncommittedChanges) {
-                // Desabilita o botão OK (merge)
-                setOKActionEnabled(false);
-
-                // Mostra mensagem de aviso
-                warningLabel.setText(MessageBundle.message("error.source.uncommitted.changes.message"));
-                warningLabel.setVisible(true);
-            } else {
-                // Habilita o botão OK (merge)
-                setOKActionEnabled(true);
-
-                // Esconde a mensagem de aviso
-                warningLabel.setVisible(false);
-            }
+                // Volta para a EDT para atualizar a UI
+                ApplicationManager.getApplication().invokeLater(() -> {
+                    if (hasChanges) {
+                        // Mostra mensagem de aviso
+                        warningLabel.setText(MessageBundle.message("error.source.uncommitted.changes.message"));
+                        warningLabel.setVisible(true);
+                        setOKActionEnabled(false);
+                    } else {
+                        // Esconde a mensagem de aviso
+                        warningLabel.setVisible(false);
+                        setOKActionEnabled(true);
+                    }
+                });
+            });
         } else {
-            // Se não for a branch atual, não podemos verificar alterações não commitadas
-            // então apenas habilitamos o botão OK
+            // Se não for a branch atual, habilita o botão OK
             setOKActionEnabled(true);
-            warningLabel.setVisible(false);
         }
     }
 
     /**
-     * Verifica se há alterações não commitadas no working directory
+     * Verifica se há alterações não commitadas no working directory.
+     * Esta função deve ser chamada apenas de uma thread background.
      *
      * @return true se existem alterações não commitadas, false se o working
      *         directory está limpo
      */
-    private boolean hasUncommittedChanges() {
+    private boolean hasUncommittedChangesNonEDT() {
         GitLineHandler statusHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.STATUS);
         statusHandler.addParameters("--porcelain");
         GitCommandResult statusResult = git.runCommand(statusHandler);
@@ -270,6 +275,10 @@ public class GitMultiMergeDialog extends DialogWrapper {
         }
     }
 
+    /**
+     * Verifica se há alterações não commitadas durante a operação de OK.
+     * Esta verificação é feita de forma síncrona pois o usuário já está aguardando.
+     */
     @Override
     protected void doOKAction() {
         // Validação de entrada
@@ -280,14 +289,43 @@ public class GitMultiMergeDialog extends DialogWrapper {
             Messages.showErrorDialog(project, MessageBundle.message("error.no.source"),
                     MessageBundle.message("dialog.title"));
             return;
-        } else if (hasUncommittedChanges()) {
-            Messages.showErrorDialog(
-                    project,
-                    MessageBundle.message("error.source.uncommitted.changes.details", sourceBranch),
-                    MessageBundle.message("error.source.uncommitted.changes"));
-            return;
         }
 
+        // Verificação final antes de prosseguir
+        String currentBranch = repository.getCurrentBranchName();
+        if (currentBranch != null && currentBranch.equals(sourceBranch)) {
+            // Executa a verificação em uma task modal para feedback visual
+            ProgressManager.getInstance().run(new Task.Modal(project, MessageBundle.message("progress.checking.changes"), true) {
+                private boolean hasChanges = false;
+
+                @Override
+                public void run(@NotNull ProgressIndicator indicator) {
+                    hasChanges = hasUncommittedChangesNonEDT();
+                }
+
+                @Override
+                public void onSuccess() {
+                    if (hasChanges) {
+                        Messages.showErrorDialog(
+                                project,
+                                MessageBundle.message("error.source.uncommitted.changes.details", sourceBranch),
+                                MessageBundle.message("error.source.uncommitted.changes"));
+                    } else {
+                        // Só prossegue se não houver alterações
+                        continueWithOkAction(sourceBranch, targetBranches);
+                    }
+                }
+            });
+        } else {
+            // Se não for a branch atual, prossegue normalmente
+            continueWithOkAction(sourceBranch, targetBranches);
+        }
+    }
+
+    /**
+     * Continua com a ação OK após validações
+     */
+    private void continueWithOkAction(String sourceBranch, List<String> targetBranches) {
         if (targetBranches.isEmpty()) {
             Messages.showErrorDialog(project, MessageBundle.message("error.no.targets"),
                     MessageBundle.message("dialog.title"));
@@ -307,7 +345,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
         boolean pushAfterMerge = pushAfterMergeCheckBox.isSelected();
         String mergeMessage = mergeCommitMessageField.getText();
 
-        // Inicia o processo de merge em background com barra de progresso
+        // Inicia o processo de merge em background
         ProgressManager.getInstance()
                 .run(new Task.Backgroundable(project, MessageBundle.message("dialog.title"), true) {
                     @Override
@@ -324,7 +362,6 @@ public class GitMultiMergeDialog extends DialogWrapper {
                                 indicator);
 
                         future.exceptionally(throwable -> {
-                            // Tratamento de erro simplificado
                             NotificationHelper.notifyError(project, NotificationHelper.DEFAULT_TITLE, throwable);
                             return false;
                         });
