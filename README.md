@@ -9,6 +9,7 @@ Plugin para IntelliJ IDEA que permite realizar o merge de uma branch source para
 ## Funcionalidades
 
 - Selecionar uma branch source e até 5 branches target para merge
+- **Layout vertical otimizado** com foco na visualização de branches target
 - Interface otimizada com ComboBox para branch source e campo de busca para branches target
 - Seleção automática da branch atual como source padrão
 - Push automático para remotes após merge bem-sucedido
@@ -45,10 +46,10 @@ Plugin para IntelliJ IDEA que permite realizar o merge de uma branch source para
 1. Abra um projeto com repositório Git no IntelliJ IDEA
 2. No menu "Git", selecione a opção "Multi Merge..."
 3. Na tela de configuração:
-   - A branch atual será pré-selecionada como source (você pode alterá-la no ComboBox)
-   - Selecione as branches target (até 5) na lista à direita
+   - A branch atual será pré-selecionada como source no topo da interface
+   - Selecione as branches target (até 5) na lista central ampliada
    - Use o campo de busca para filtrar branches (útil em repositórios grandes)
-4. Configure as opções desejadas:
+4. Configure as opções desejadas na parte inferior da interface:
    - **Squash commits**: Combina todos os commits da branch source em um único commit
    - **Push para remote após o merge**: Atualiza automaticamente o repositório remoto para cada branch após o merge
    - **Deletar branch source após o merge**: Remove a branch source (local e remota) depois que todos os merges forem bem-sucedidos
@@ -57,6 +58,15 @@ Plugin para IntelliJ IDEA que permite realizar o merge de uma branch source para
 7. Acompanhe o progresso na barra de status
 8. Resolva conflitos, se necessário
 9. Verifique o resultado na notificação final
+
+## Interface Redesenhada
+
+O plugin apresenta um novo design vertical (450x550 pixels) que melhora significativamente a experiência do usuário:
+
+- **Layout Vertical**: Fluxo de trabalho intuitivo de cima para baixo
+- **Área Ampliada para Branches**: Visualize mais branches target simultaneamente
+- **Controles Compactos**: Opções organizadas de forma mais eficiente
+- **Melhor Organização Visual**: Separação clara entre as seções funcionais
 
 ## Fluxo de trabalho completo do plugin
 
@@ -113,7 +123,7 @@ onde `XX` é o código do idioma (como fr, de, it, etc.).
 
 ## Versões
 
-- **1.2.0**: Suporte completo a internacionalização, compatibilidade com Java 17
+- **1.2.0**: Suporte completo a internacionalização, interface redesenhada com layout vertical e compatibilidade com Java 17
 - **1.1.0**: Melhorias na interface e correções de bugs
 - **1.0.0**: Versão inicial com funcionalidades básicas
 
