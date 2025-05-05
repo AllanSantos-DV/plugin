@@ -135,7 +135,23 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
                     continue;
                 }
 
-                // 2. Executa o merge
+                // 2. Verifica primeiro se há alterações para mesclar
+                boolean branchAlreadyUpToDate = !hasPendingChanges(repository, sourceBranch);
+
+                if (branchAlreadyUpToDate) {
+                    // Se não há alterações, mostra notificação informativa e continua
+                    NotificationHelper.notifyInfo(
+                            project,
+                            NotificationHelper.DEFAULT_TITLE,
+                            MessageBundle.message("notification.already.up.to.date", targetBranch, sourceBranch));
+
+                    // Marca como sucesso e continua para a próxima branch
+                    successfulMerges.add(targetBranch);
+                    currentStep++;
+                    continue;
+                }
+
+                // 3. Executa o merge apenas se houver alterações
                 GitCommandResult mergeResult = merge(repository, sourceBranch, squash, commitMessage);
                 if (!mergeResult.success()) {
                     NotificationHelper.notifyError(
@@ -150,7 +166,7 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
 
                 successfulMerges.add(targetBranch);
 
-                // 3. Push se necessário
+                // 4. Push se necessário (apenas se houve merge)
                 if (pushAfterMerge) {
                     indicator.setText(MessageBundle.message("progress.pushing", targetBranch));
                     GitCommandResult pushResult = push(repository, targetBranch);
@@ -160,7 +176,6 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
                                 NotificationHelper.DEFAULT_TITLE,
                                 MessageBundle.message("error.push", targetBranch,
                                         String.join("\n", pushResult.getErrorOutput())));
-                        // Não vamos falhar todo o processo apenas por causa do push
                     }
                 }
 
@@ -181,7 +196,7 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
                 allSuccessful = false;
             }
 
-            // 4. Deletar branch source se necessário
+            // 5. Deletar branch source se necessário
             if (deleteSourceBranch && allSuccessful) {
                 indicator.setText(MessageBundle.message("progress.deleting.source"));
 
@@ -271,6 +286,20 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
     }
 
     /**
+     * Verifica se há alterações pendentes entre a branch atual e a branch de origem
+     * 
+     * @return true se existem alterações, false se as branches estão idênticas
+     */
+    private boolean hasPendingChanges(@NotNull GitRepository repository, @NotNull String sourceBranch) {
+        GitLineHandler diffHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.DIFF);
+        diffHandler.addParameters(sourceBranch, "--name-only");
+        GitCommandResult diffResult = git.runCommand(diffHandler);
+
+        // Retorna true se houver pelo menos uma linha não vazia na saída do diff
+        return diffResult.getOutput().stream().anyMatch(line -> !line.trim().isEmpty());
+    }
+
+    /**
      * Faz o checkout para uma branch específica
      */
     private GitCommandResult checkout(@NotNull GitRepository repository, @NotNull String branchName) {
@@ -284,23 +313,6 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
      */
     private GitCommandResult merge(@NotNull GitRepository repository, @NotNull String sourceBranch,
             boolean squash, String commitMessage) {
-        // Primeiro, verifica se há alterações para mesclar
-        GitLineHandler diffHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.DIFF);
-        diffHandler.addParameters(sourceBranch, "--name-only");
-        GitCommandResult diffResult = git.runCommand(diffHandler);
-
-        // Se não houver diferenças e squash estiver ativado,
-        // retorna sucesso sem tentar fazer squash
-        boolean hasChanges = diffResult.getOutput().stream().anyMatch(line -> !line.trim().isEmpty());
-
-        // Se não houver alterações, apenas retorna sucesso sem fazer squash
-        if (!hasChanges) {
-            // Criando um resultado de sucesso com mensagem internacionalizada
-            return new GitCommandResult(true, 0,
-                    List.of(MessageBundle.message("branch.already.up.to.date")),
-                    List.of());
-        }
-
         // Processo normal de merge
         GitLineHandler handler = new GitLineHandler(project, repository.getRoot(), GitCommand.MERGE);
 

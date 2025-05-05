@@ -66,6 +66,20 @@ public class NotificationHelper {
     }
 
     /**
+     * Exibe notificação informativa.
+     *
+     * @param project Projeto atual
+     * @param title   Título da notificação
+     * @param message Mensagem informativa
+     */
+    public static void notifyInfo(@NotNull Project project, @NotNull String title, @NotNull String message) {
+        // Usando a API atualizada para 2025
+        NOTIFICATION_GROUP.createNotification(message, NotificationType.INFORMATION)
+                .setTitle(title)
+                .notify(project);
+    }
+
+    /**
      * Exibe notificação de aviso.
      *
      * @param project Projeto atual
