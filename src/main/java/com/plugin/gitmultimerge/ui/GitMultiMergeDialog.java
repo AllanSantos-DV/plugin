@@ -78,58 +78,67 @@ public class GitMultiMergeDialog extends DialogWrapper {
         JPanel panel = new JPanel(new GridBagLayout());
         GridBagConstraints c = new GridBagConstraints();
 
-        // Configuração do painel principal
-        c.fill = GridBagConstraints.BOTH;
-        c.insets = JBUI.insets(5);
         c.gridx = 0;
         c.gridy = 0;
-        c.weightx = 1.0; // Ocupar toda a largura horizontal
+        c.weightx = 1.0;
+        panel.add(createSourcePanel(), c);
 
-        // ComboBox de branch source
+        c.gridy = 1;
+        c.weighty = 1.0;
+        panel.add(createTargetPanel(), c);
+
+        c.gridy = 2;
+        c.weighty = 0;
+        panel.add(createOptionsPanel(), c);
+
+        panel.setPreferredSize(new Dimension(450, 550));
+        return panel;
+    }
+
+    /**
+     * Cria o painel de seleção da branch source.
+     */
+    private JPanel createSourcePanel() {
         JPanel sourcePanel = new JPanel(new BorderLayout(0, 5));
         sourcePanel.add(new JBLabel(MessageBundle.message("source.branch.label")), BorderLayout.NORTH);
 
         sourceBranchComboBox = new ComboBox<>(allBranchNames.toArray(new String[0]));
-        // Tentar selecionar a branch atual
         String currentBranch = repository.getCurrentBranchName();
         if (currentBranch != null) {
             sourceBranchComboBox.setSelectedItem(currentBranch);
         }
         sourcePanel.add(sourceBranchComboBox, BorderLayout.CENTER);
 
-        // Adiciona o label de aviso de alterações não commitadas
         warningLabel = new JBLabel();
         warningLabel.setForeground(JBColor.RED);
         warningLabel.setVisible(false);
         sourcePanel.add(warningLabel, BorderLayout.SOUTH);
 
-        c.weighty = 0;
-        panel.add(sourcePanel, c);
+        sourceBranchComboBox.addActionListener(e -> {
+            updateTargetList();
+            checkSourceBranchUncommittedChangesAsync();
+        });
 
-        // Lista de branches target com campo de busca
-        c.gridy = 1;
-        c.weighty = 1.0; // Dar mais espaço vertical para a lista de targets (aumentado)
+        return sourcePanel;
+    }
 
+    /**
+     * Cria o painel de seleção das branches target com campo de busca.
+     */
+    private JPanel createTargetPanel() {
         JPanel targetMainPanel = new JPanel(new BorderLayout(0, 5));
         targetMainPanel.add(new JBLabel(MessageBundle.message("target.branches.label")), BorderLayout.NORTH);
 
-        // Painel para a lista de targets com campo de busca
         JPanel targetPanel = new JPanel(new BorderLayout(0, 5));
-
-        // Campo de busca
         searchField = new JBTextField();
         searchField.getEmptyText().setText(MessageBundle.message("target.branches.search"));
         targetPanel.add(searchField, BorderLayout.NORTH);
 
-        // Lista de branches target
         targetListModel = new DefaultListModel<>();
         targetBranchList = new JBList<>(targetListModel);
         targetBranchList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-
-        // Atualizar inicialmente a lista de targets
         updateTargetList();
 
-        // Adicionar listener para o campo de busca
         searchField.getDocument().addDocumentListener(new DocumentAdapter() {
             @Override
             protected void textChanged(@NotNull DocumentEvent e) {
@@ -137,13 +146,6 @@ public class GitMultiMergeDialog extends DialogWrapper {
             }
         });
 
-        // Adicionar listener para o combobox de source
-        sourceBranchComboBox.addActionListener(e -> {
-            updateTargetList();
-            checkSourceBranchUncommittedChangesAsync();
-        });
-
-        // Limite a seleção para no máximo 5 branches target
         targetBranchList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting() && targetBranchList.getSelectedIndices().length > 5) {
                 targetBranchList.setSelectedIndices(
@@ -154,18 +156,20 @@ public class GitMultiMergeDialog extends DialogWrapper {
         JBScrollPane targetScrollPane = new JBScrollPane(targetBranchList);
         targetPanel.add(targetScrollPane, BorderLayout.CENTER);
         targetMainPanel.add(targetPanel, BorderLayout.CENTER);
+        return targetMainPanel;
+    }
 
-        panel.add(targetMainPanel, c);
-
-        // Opções adicionais - Agora mais compactas
+    /**
+     * Cria o painel de opções adicionais (checkboxes e mensagem de commit).
+     */
+    private JPanel createOptionsPanel() {
         JPanel optionsPanel = new JPanel(new GridBagLayout());
         GridBagConstraints optConstraints = new GridBagConstraints();
         optConstraints.fill = GridBagConstraints.HORIZONTAL;
         optConstraints.weightx = 1.0;
         optConstraints.gridx = 0;
-        optConstraints.insets = JBUI.insets(2); // Espaçamento reduzido
+        optConstraints.insets = JBUI.insets(2);
 
-        // Checkboxes mais compactos
         squashCheckBox = new JBCheckBox(MessageBundle.message("options.squash.commits"));
         optConstraints.gridy = 0;
         optionsPanel.add(squashCheckBox, optConstraints);
@@ -175,11 +179,10 @@ public class GitMultiMergeDialog extends DialogWrapper {
         optionsPanel.add(deleteSourceCheckBox, optConstraints);
 
         pushAfterMergeCheckBox = new JBCheckBox(MessageBundle.message("options.push.after.merge"));
-        pushAfterMergeCheckBox.setSelected(true); // Habilitado por padrão
+        pushAfterMergeCheckBox.setSelected(true);
         optConstraints.gridy = 2;
         optionsPanel.add(pushAfterMergeCheckBox, optConstraints);
 
-        // Painel para mensagem de commit
         JPanel commitMessagePanel = new JPanel(new BorderLayout(5, 2));
         commitMessagePanel.add(new JBLabel(MessageBundle.message("options.commit.message")), BorderLayout.NORTH);
         mergeCommitMessageField = new JBTextField();
@@ -187,17 +190,10 @@ public class GitMultiMergeDialog extends DialogWrapper {
         commitMessagePanel.add(mergeCommitMessageField, BorderLayout.CENTER);
 
         optConstraints.gridy = 3;
-        optConstraints.insets = JBUI.insets(5, 2, 2, 2); // Adiciona um pouco mais de espaço acima
+        optConstraints.insets = JBUI.insets(5, 2, 2, 2);
         optionsPanel.add(commitMessagePanel, optConstraints);
 
-        c.gridy = 2;
-        c.weighty = 0;
-        panel.add(optionsPanel, c);
-
-        // Tamanho do diálogo - agora mais estreito e mais alto
-        panel.setPreferredSize(new Dimension(450, 550));
-
-        return panel;
+        return optionsPanel;
     }
 
     /**
@@ -283,48 +279,61 @@ public class GitMultiMergeDialog extends DialogWrapper {
      */
     @Override
     protected void doOKAction() {
-        // Validação de entrada
         String sourceBranch = (String) sourceBranchComboBox.getSelectedItem();
         List<String> targetBranches = targetBranchList.getSelectedValuesList();
 
-        if (sourceBranch == null) {
-            Messages.showErrorDialog(project, MessageBundle.message("error.no.source"),
-                    MessageBundle.message("dialog.title"));
+        if (!validateSourceBranch(sourceBranch))
             return;
-        }
+        if (!validateTargetBranches(sourceBranch, targetBranches))
+            return;
 
-        continueWithOkAction(sourceBranch, targetBranches);
+        startMergeProcess(sourceBranch, targetBranches);
+        super.doOKAction();
     }
 
     /**
-     * Continua com a ação OK após validações
+     * Valida a branch source selecionada.
      */
-    private void continueWithOkAction(String sourceBranch, List<String> targetBranches) {
+    private boolean validateSourceBranch(String sourceBranch) {
+        if (sourceBranch == null) {
+            Messages.showErrorDialog(project, MessageBundle.message("error.no.source"),
+                    MessageBundle.message("dialog.title"));
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Valida as branches target selecionadas.
+     */
+    private boolean validateTargetBranches(String sourceBranch, List<String> targetBranches) {
         if (targetBranches.isEmpty()) {
             Messages.showErrorDialog(project, MessageBundle.message("error.no.targets"),
                     MessageBundle.message("dialog.title"));
-            return;
+            return false;
         }
-
         if (targetBranches.contains(sourceBranch)) {
             Messages.showErrorDialog(project,
                     MessageBundle.message("error.branch.protected", sourceBranch),
                     MessageBundle.message("dialog.title"));
-            return;
+            return false;
         }
+        return true;
+    }
 
-        // Configurações adicionais
+    /**
+     * Inicia o processo de merge em background.
+     */
+    private void startMergeProcess(String sourceBranch, List<String> targetBranches) {
         boolean squash = squashCheckBox.isSelected();
         boolean deleteSource = deleteSourceCheckBox.isSelected();
         boolean pushAfterMerge = pushAfterMergeCheckBox.isSelected();
         String mergeMessage = mergeCommitMessageField.getText();
 
-        // Inicia o processo de merge em background
         ProgressManager.getInstance()
                 .run(new Task.Backgroundable(project, MessageBundle.message("dialog.title"), true) {
                     @Override
                     public void run(@NotNull ProgressIndicator indicator) {
-                        // Usa o serviço GitMultiMergeService para executar o merge
                         CompletableFuture<Boolean> future = gitService.performMerge(
                                 repository,
                                 sourceBranch,
@@ -334,14 +343,11 @@ public class GitMultiMergeDialog extends DialogWrapper {
                                 deleteSource,
                                 mergeMessage,
                                 indicator);
-
                         future.exceptionally(throwable -> {
                             NotificationHelper.notifyError(project, NotificationHelper.DEFAULT_TITLE, throwable);
                             return false;
                         });
                     }
                 });
-
-        super.doOKAction();
     }
 }
