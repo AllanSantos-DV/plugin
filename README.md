@@ -2,6 +2,41 @@
 
 Plugin para IntelliJ IDEA que permite realizar o merge de uma branch source para múltiplas branches target simultaneamente, com opções de push automático e limpeza de branches.
 
+## Estrutura de Pacotes
+
+O projeto segue uma organização baseada em padrões de projeto, facilitando a manutenção e expansão:
+
+```
+src/
+  main/
+    java/
+      com/
+        plugin/
+          gitmultimerge/
+            command/   # Ações encapsuladas (Command Pattern)
+              GitMultiMergeAction.java
+            service/   # Serviços de negócio e integrações
+              GitMultiMergeService.java
+              GitMultiMergeServiceImpl.java
+            ui/        # Componentes de interface gráfica
+              GitMultiMergeDialog.java
+            util/      # Utilitários e helpers
+              MessageBundle.java
+              NotificationHelper.java
+            builder/   # (Reservado para Builders)
+            factory/   # (Reservado para Fábricas)
+            observer/  # (Reservado para Observers)
+            strategy/  # (Reservado para Estratégias)
+```
+
+- **command/**: Contém ações do plugin, como a ação principal de merge.
+- **service/**: Lógica de negócio, integrações e regras do plugin.
+- **ui/**: Diálogos, painéis e componentes de interface.
+- **util/**: Classes utilitárias, helpers e internacionalização.
+- **builder/**, **factory/**, **observer/**, **strategy/**: Estrutura pronta para expansão futura conforme padrões de design.
+
+> **Observação:** Os pacotes reservados podem ser utilizados para futuras expansões, mantendo o projeto organizado e aderente a boas práticas.
+
 ## Screenshots
 
 ![Tela de seleção de branches](images/screenshots/branch-selection.png)

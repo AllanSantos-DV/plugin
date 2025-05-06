@@ -1,4 +1,4 @@
-package com.plugin.gitmultimerge;
+package com.plugin.gitmultimerge.ui;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.progress.ProgressIndicator;
@@ -17,8 +17,7 @@ import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBTextField;
 import com.intellij.util.ui.JBUI;
 import com.plugin.gitmultimerge.service.GitMultiMergeService;
-import com.plugin.gitmultimerge.util.MessageBundle;
-import com.plugin.gitmultimerge.util.NotificationHelper;
+
 import git4idea.repo.GitRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

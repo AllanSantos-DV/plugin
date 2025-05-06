@@ -1,4 +1,4 @@
-package com.plugin.gitmultimerge;
+package com.plugin.gitmultimerge.command;
 
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
@@ -10,6 +10,7 @@ import com.plugin.gitmultimerge.util.MessageBundle;
 import com.plugin.gitmultimerge.util.NotificationHelper;
 import git4idea.repo.GitRepository;
 import git4idea.repo.GitRepositoryManager;
+import com.plugin.gitmultimerge.ui.GitMultiMergeDialog;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -24,7 +25,8 @@ public class GitMultiMergeAction extends AnAction implements DumbAware {
      * A apresentação será configurada no método update.
      */
     public GitMultiMergeAction() {
-        // A apresentação será configurada no método update para compatibilidade com 2025
+        // A apresentação será configurada no método update para compatibilidade com
+        // 2025
     }
 
     @Override
