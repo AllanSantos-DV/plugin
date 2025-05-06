@@ -1,6 +1,5 @@
 package com.plugin.gitmultimerge.ui;
 
-import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.progress.Task;
@@ -35,8 +34,6 @@ import java.util.concurrent.CompletableFuture;
  * Usa GitMultiMergeService para implementar operações Git.
  */
 public class GitMultiMergeDialog extends DialogWrapper {
-    private static final Logger LOG = Logger.getInstance(GitMultiMergeDialog.class);
-
     private final Project project;
     private final GitRepository repository;
     private final GitMultiMergeService gitService;
@@ -81,14 +78,17 @@ public class GitMultiMergeDialog extends DialogWrapper {
         c.gridx = 0;
         c.gridy = 0;
         c.weightx = 1.0;
+        c.fill = GridBagConstraints.HORIZONTAL;
         panel.add(createSourcePanel(), c);
 
         c.gridy = 1;
         c.weighty = 1.0;
+        c.fill = GridBagConstraints.BOTH;
         panel.add(createTargetPanel(), c);
 
         c.gridy = 2;
         c.weighty = 0;
+        c.fill = GridBagConstraints.HORIZONTAL;
         panel.add(createOptionsPanel(), c);
 
         panel.setPreferredSize(new Dimension(450, 550));
@@ -102,12 +102,12 @@ public class GitMultiMergeDialog extends DialogWrapper {
         JPanel sourcePanel = new JPanel(new BorderLayout(0, 5));
         sourcePanel.add(new JBLabel(MessageBundle.message("source.branch.label")), BorderLayout.NORTH);
 
-        sourceBranchComboBox = new ComboBox<>(allBranchNames.toArray(new String[0]));
+        JPanel comboPanel = new JPanel(new BorderLayout());
         String currentBranch = repository.getCurrentBranchName();
-        if (currentBranch != null) {
-            sourceBranchComboBox.setSelectedItem(currentBranch);
-        }
-        sourcePanel.add(sourceBranchComboBox, BorderLayout.CENTER);
+        sourceBranchComboBox = new ComboBox<>(allBranchNames.toArray(new String[0]));
+        sourceBranchComboBox.setSelectedItem(currentBranch);
+        comboPanel.add(sourceBranchComboBox, BorderLayout.CENTER);
+        sourcePanel.add(comboPanel, BorderLayout.CENTER);
 
         warningLabel = new JBLabel();
         warningLabel.setForeground(JBColor.RED);
@@ -130,9 +130,10 @@ public class GitMultiMergeDialog extends DialogWrapper {
         targetMainPanel.add(new JBLabel(MessageBundle.message("target.branches.label")), BorderLayout.NORTH);
 
         JPanel targetPanel = new JPanel(new BorderLayout(0, 5));
+        JPanel searchPanel = new JPanel(new BorderLayout());
         searchField = new JBTextField();
-        searchField.getEmptyText().setText(MessageBundle.message("target.branches.search"));
-        targetPanel.add(searchField, BorderLayout.NORTH);
+        searchPanel.add(searchField, BorderLayout.CENTER);
+        targetPanel.add(searchPanel, BorderLayout.NORTH);
 
         targetListModel = new DefaultListModel<>();
         targetBranchList = new JBList<>(targetListModel);
@@ -204,34 +205,19 @@ public class GitMultiMergeDialog extends DialogWrapper {
     private void checkSourceBranchUncommittedChangesAsync() {
         String selectedBranch = (String) sourceBranchComboBox.getSelectedItem();
         if (selectedBranch == null) {
-            LOG.info("Branch selecionada é nula, mantendo botão OK desabilitado");
             setOKActionEnabled(false);
             return;
         }
 
-        LOG.info("Iniciando verificação para branch: " + selectedBranch);
-
         // Botão OK começa desabilitado e só é habilitado se não houver alterações
         setOKActionEnabled(false);
         warningLabel.setVisible(false);
-
-        String currentBranch = repository.getCurrentBranchName();
-        LOG.info("Branch atual: " + currentBranch);
-
-        // Se a branch selecionada não for a atual, sempre habilitar o botão
-        // pois não conseguimos verificar alterações em branches não atuais
-        if (!selectedBranch.equals(currentBranch)) {
-            LOG.info("Branch selecionada diferente da atual, habilitando botão OK");
-            setOKActionEnabled(true);
-            return;
-        }
 
         // Criar um CompletableFuture para a validação
         CompletableFuture<Boolean> validationFuture = CompletableFuture.supplyAsync(() -> {
             try {
                 return gitService.hasUncommittedChanges(repository);
             } catch (Exception e) {
-                LOG.error("Erro ao verificar alterações não commitadas", e);
                 return true; // Em caso de erro, consideramos que há alterações
             }
         });
@@ -239,13 +225,11 @@ public class GitMultiMergeDialog extends DialogWrapper {
         // Processar o resultado na EDT
         validationFuture.thenAcceptAsync(hasChanges -> {
             if (hasChanges) {
-                LOG.info("Alterações não commitadas encontradas, mostrando aviso e mantendo botão OK desabilitado");
                 // Mostra mensagem de aviso
                 warningLabel.setText(MessageBundle.message("error.source.uncommitted.changes.message"));
                 warningLabel.setVisible(true);
                 setOKActionEnabled(false);
             } else {
-                LOG.info("Sem alterações não commitadas, ocultando aviso e habilitando botão OK");
                 // Esconde a mensagem de aviso
                 warningLabel.setVisible(false);
                 setOKActionEnabled(true);
