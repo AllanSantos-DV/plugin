@@ -334,4 +334,10 @@ public class GitMultiMergeDialog extends DialogWrapper {
                     }
                 });
     }
+
+    @Override
+    public void show() {
+        checkSourceBranchUncommittedChangesAsync();
+        super.show();
+    }
 }
