@@ -1,4 +1,4 @@
-package com.plugin.gitmultimerge;
+package com.plugin.gitmultimerge.command;
 
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
@@ -10,21 +10,20 @@ import com.plugin.gitmultimerge.util.MessageBundle;
 import com.plugin.gitmultimerge.util.NotificationHelper;
 import git4idea.repo.GitRepository;
 import git4idea.repo.GitRepositoryManager;
+import com.plugin.gitmultimerge.ui.GitMultiMergeDialog;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Ação principal para o plugin Git Multi Merge.
- * Permite realizar o merge de uma branch source para múltiplas branches target.
- * Implementa DumbAware para garantir disponibilidade durante indexação.
+ * Action responsible for opening the Git Multi Merge dialog in the IntelliJ UI.
+ * Ensures the action is only available when a valid Git repository is present.
  */
 public class GitMultiMergeAction extends AnAction implements DumbAware {
 
     /**
-     * Construtor padrão sem configuração de apresentação.
-     * A apresentação será configurada no método update.
+     * Default constructor.
      */
     public GitMultiMergeAction() {
-        // A apresentação será configurada no método update para compatibilidade com 2025
+        // Presentation is configured in the update method for compatibility.
     }
 
     @Override
@@ -35,14 +34,11 @@ public class GitMultiMergeAction extends AnAction implements DumbAware {
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
         Project project = e.getProject();
-        if (project == null) {
+        if (project == null)
             return;
-        }
 
-        // Obtém o repositório Git atual
         GitRepositoryManager repositoryManager = GitRepositoryManager.getInstance(project);
 
-        // Verifica se há um repositório Git válido
         if (repositoryManager.getRepositories().isEmpty()) {
             NotificationHelper.notifyError(
                     project,
@@ -51,35 +47,34 @@ public class GitMultiMergeAction extends AnAction implements DumbAware {
             return;
         }
 
-        // Obtém o repositório ativo ou o primeiro disponível
         GitRepository repository = repositoryManager.getRepositories().get(0);
 
-        // Exibe o diálogo para seleção de branches
-        GitMultiMergeDialog dialog = new GitMultiMergeDialog(project, repository);
-
-        // O diálogo lidará com a execução dos merges ao clicar em OK
+        // Isolando a criação do diálogo para facilitar testes e extensões
+        GitMultiMergeDialog dialog = createDialog(project, repository);
         dialog.showAndGet();
+    }
+
+    /**
+     * Factory method for creating the dialog. Can be overridden for testing.
+     */
+    protected GitMultiMergeDialog createDialog(Project project, GitRepository repository) {
+        return new GitMultiMergeDialog(project, repository);
     }
 
     @Override
     public void update(@NotNull AnActionEvent e) {
-        // Configuração da apresentação conforme padrão 2025
         Presentation presentation = e.getPresentation();
-        presentation.setText(MessageBundle.message("action.GitMultiMerge.text"), false); // Não usar mnemônico
+        presentation.setText(MessageBundle.message("action.GitMultiMerge.text"), false);
         presentation.setDescription(MessageBundle.message("action.GitMultiMerge.description"));
 
-        // Ativa a ação apenas quando um projeto está aberto e tem Git
         Project project = e.getProject();
         if (project == null) {
             presentation.setEnabledAndVisible(false);
             return;
         }
 
-        // Verifica se há repositórios Git disponíveis
         GitRepositoryManager repositoryManager = GitRepositoryManager.getInstance(project);
         boolean hasGitRepositories = !repositoryManager.getRepositories().isEmpty();
-
-        // Atualiza visibilidade e estado de habilitação
         presentation.setEnabledAndVisible(hasGitRepositories);
     }
 }

@@ -4,7 +4,8 @@ plugins {
 }
 
 group = "com.plugin"
-version = "1.2.0"
+// Centraliza a versão lendo do arquivo VERSION
+version = file("VERSION").readText().trim()
 
 repositories {
     mavenCentral()

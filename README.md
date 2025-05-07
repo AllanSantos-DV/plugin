@@ -1,10 +1,97 @@
 # Git Multi Merge Plugin
 
-Plugin para IntelliJ IDEA que permite realizar o merge de uma branch source para múltiplas branches target simultaneamente, com opções de push automático e limpeza de branches.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+Plugin para IntelliJ IDEA que permite realizar o merge de uma branch source para múltiplas branches target simultaneamente, com opções de push automático e limpeza de branches. Estruturado de forma modular, seguindo boas práticas de arquitetura e responsabilidade única.
+
+## Índice
+- [Estrutura de Pacotes](#estrutura-de-pacotes)
+- [Arquitetura](#arquitetura)
+- [Screenshots](#screenshots)
+- [Funcionalidades](#funcionalidades)
+- [Requisitos](#requisitos)
+- [Instalação Manual](#instalação-manual)
+- [Como Usar](#como-usar)
+- [Interface Redesenhada](#interface-redesenhada)
+- [Fluxo de trabalho completo do plugin](#fluxo-de-trabalho-completo-do-plugin)
+- [Suporte a Múltiplos Idiomas](#suporte-a-múltiplos-idiomas)
+- [Solução de problemas](#solução-de-problemas)
+- [Limitações](#limitações)
+- [Contribuição](#contribuição)
+- [Versões](#versões)
+- [Licença](#licença)
+- [Contato](#contato)
+- [Exemplo de uso](#exemplo-de-uso)
+
+## Estrutura de Pacotes
+
+O projeto segue uma organização baseada em padrões de projeto, facilitando a manutenção e expansão:
+
+```
+src/
+  main/
+    java/
+      com/
+        plugin/
+          gitmultimerge/
+            command/   # Ações encapsuladas (Command Pattern)
+              GitMultiMergeAction.java
+            service/   # Serviços de negócio, integrações e contratos
+              interface/   # Contratos (interfaces) do domínio de serviço
+                GitMultiMergeService.java
+                GitRepositoryOperations.java
+                MergeStep.java
+              GitMultiMergeServiceImpl.java
+              GitRepositoryOperationsImpl.java
+              (demais etapas e contextos do fluxo de merge)
+            ui/        # Componentes de interface gráfica
+              GitMultiMergeDialog.java
+            util/      # Utilitários e helpers
+              MessageBundle.java
+              NotificationHelper.java
+```
+
+- **command/**: Contém ações do plugin, como a ação principal de merge.
+- **service/interface/**: Contratos (interfaces) para serviços e operações Git.
+- **service/**: Implementações concretas, etapas do fluxo e contexto do merge.
+- **ui/**: Diálogos, painéis e componentes de interface.
+- **util/**: Classes utilitárias, helpers e internacionalização.
+
+> **Observação:** Novos pacotes para padrões de design (ex: builder, factory, observer, strategy) devem ser criados apenas quando houver necessidade real de expansão, mantendo a estrutura enxuta e organizada.
+
+## Arquitetura
+
+O projeto segue uma arquitetura modular, separando claramente responsabilidades:
+
+- **UI (`ui/`)**: Responsável apenas pela exibição e interação com o usuário.
+- **Serviços (`service/` e `service/interface/`)**: Contêm a lógica de negócio, contratos e integrações com o Git.
+- **Comandos (`command/`)**: Ações disparadas pela interface do usuário.
+- **Utilitários (`util/`)**: Helpers para internacionalização e notificações.
+
+Essa separação facilita a manutenção, testes e futuras expansões.
 
 ## Screenshots
 
-![Tela de seleção de branches](images/screenshots/branch-selection.png)
+<div>
+  <table>
+    <tr>
+        <td>
+            <img src="images/screenshots/branch-selection.png" alt="Seleção de Branches" width="924"/><br>
+            <sub>Seleção de Branches</sub>
+        </td>
+        <td>
+            <img src="images/screenshots/branch-selection-changes.png" alt="Branches com Alterações" width="924"/><br>
+            <sub>Branches com Alterações</sub>
+        </td>
+        <td>
+            <img src="images/screenshots/notify.png" alt="Notificação de Sucesso" width="1280"/><br>
+            <sub>Notificação de Sucesso</sub>
+            <img src="images/screenshots/notify-error.png" alt="Notificação de Erro" width="1280"/><br>
+            <sub>Notificação de Erro</sub>
+        </td>
+    </tr>
+  </table>
+</div>
 
 ## Funcionalidades
 
@@ -25,6 +112,27 @@ Plugin para IntelliJ IDEA que permite realizar o merge de uma branch source para
 - **Validação assíncrona** de alterações não commitadas
 - **Processamento em background** para melhor performance
 - **Atualizações de UI thread-safe**
+
+---
+
+### Novidades e Melhorias Recentes
+
+- **Sincronização Automática com a Interface do IntelliJ:**  
+  Após operações como checkout, push, fetch e deleção de branch, o plugin força a atualização do repositório na interface do IntelliJ, garantindo que todas as mudanças sejam refletidas imediatamente para o usuário.
+
+- **Deleção Segura da Branch Source:**  
+  O plugin detecta automaticamente se a branch source a ser deletada está ativa e realiza o checkout para uma branch segura antes de tentar a deleção, evitando erros de worktree.
+
+- **Push Inteligente para o Remote:**  
+  O push para o remote verifica se a branch remota já existe. Se não existir, faz push com upstream (`-u`), criando e rastreando a branch remota automaticamente.
+
+- **Atualização Completa de Referências Remotas:**  
+  O comando `fetchAll` executa `git fetch --all --prune` e, em seguida, atualiza o repositório na IDE, garantindo que branches deletadas ou criadas remotamente apareçam corretamente na interface.
+
+- **Internacionalização Robusta:**  
+  Todas as mensagens e notificações do plugin são internacionalizadas, com arquivos `.properties` para inglês, português do Brasil e espanhol. Novas chaves são sempre adicionadas de forma consistente.
+
+> Consulte a seção [Fluxo de trabalho completo do plugin](#fluxo-de-trabalho-completo-do-plugin) para detalhes de cada etapa.
 
 ## Requisitos
 
@@ -62,6 +170,11 @@ Plugin para IntelliJ IDEA que permite realizar o merge de uma branch source para
 8. Resolva conflitos, se necessário
 9. Verifique o resultado na notificação final
 
+### Dicas
+- Utilize o campo de busca para encontrar rapidamente branches em repositórios grandes.
+- O botão de merge só será habilitado se não houver alterações não commitadas.
+- Mensagens de feedback e erros são exibidas em tempo real na interface.
+
 ## Interface Redesenhada
 
 O plugin apresenta um novo design vertical (450x550 pixels) que melhora significativamente a experiência do usuário:
@@ -95,7 +208,7 @@ O idioma é detectado automaticamente com base no idioma configurado no IntelliJ
 
 - Settings/Preferences > Appearance & Behavior > Appearance > UI Options > Override default language
 
-Para mais detalhes sobre a internacionalização, consulte o arquivo [INTERNATIONALIZATION.md](INTERNATIONALIZATION.md).
+A internacionalização segue o padrão de arquivos de propriedades (`.properties`) e pode ser expandida facilmente para novos idiomas. Para mais detalhes, consulte o arquivo [INTERNATIONALIZATION.md](INTERNATIONALIZATION.md).
 
 ## Solução de problemas
 
@@ -105,6 +218,7 @@ Para mais detalhes sobre a internacionalização, consulte o arquivo [INTERNATIO
 - Verifique sua conexão com o remote antes de usar as funcionalidades de push/delete remotas
 - Se as alterações não aparecerem no remote após o merge, verifique se a opção "Push para remote após o merge" está habilitada
 - Para problemas de idioma, verifique se o IntelliJ IDEA está configurado para usar o idioma de sua preferência
+- Para problemas de permissões de arquivos (especialmente em ambientes corporativos), verifique as permissões do sistema operacional e do repositório.
 
 ## Limitações
 
@@ -116,6 +230,8 @@ Para mais detalhes sobre a internacionalização, consulte o arquivo [INTERNATIO
 
 Sinta-se à vontade para contribuir com este projeto através de pull requests ou reportando problemas.
 
+> Para detalhes sobre o fluxo de contribuição, consulte (ou crie) um arquivo CONTRIBUTING.md.
+
 ### Adicionando novos idiomas
 
 Para adicionar suporte a novos idiomas, crie um arquivo de propriedades seguindo o padrão:
@@ -124,8 +240,13 @@ src/main/resources/messages/GitMultiMergeBundle_XX.properties
 ```
 onde `XX` é o código do idioma (como fr, de, it, etc.).
 
+## Controle de Versão Centralizado
+
+A versão oficial do plugin é definida no arquivo `VERSION` na raiz do projeto. Sempre que for realizar um novo release, atualize este arquivo para garantir consistência entre build, plugin.xml e documentação.
+
 ## Versões
 
+- **1.3.0**: Refatoração do fluxo de merge para responsabilidade única, feedback internacionalizado, placeholder multilíngue na busca de branches, reorganização de pacotes, adição do arquivo de licença MIT e documentação aprimorada.
 - **1.2.1**: Validação assíncrona de alterações não commitadas, processamento em background e melhorias de performance
 - **1.2.0**: Suporte completo a internacionalização, interface redesenhada com layout vertical e compatibilidade com Java 17
 - **1.1.0**: Melhorias na interface e correções de bugs
@@ -142,37 +263,54 @@ Para dúvidas ou sugestões, entre em contato com o desenvolvedor através do e-
 ## Exemplo de uso
 
 ```java
-    import com.intellij.openapi.actionSystem.AnAction;
-    import com.intellij.openapi.actionSystem.AnActionEvent;
-    import com.intellij.openapi.project.Project;
-    import com.intellij.openapi.ui.Messages;
-    import br.com.allandevs.gitmerge.actions.MultiMergeAction;
-    import br.com.allandevs.gitmerge.model.MergeConfiguration;
-    import br.com.allandevs.gitmerge.service.GitMultiMergeService;
-    import java.util.Arrays;
-    
-    public class CustomMergeAction extends AnAction {
-        @Override
-        public void actionPerformed(AnActionEvent e) {
-            Project project = e.getProject();
-            if (project == null) return;
-            
-            // Configurando o merge programaticamente
-            MergeConfiguration config = new MergeConfiguration();
-            config.setSourceBranch("feature/nova-funcionalidade");
-            config.setTargetBranches(Arrays.asList("develop", "release/1.0", "hotfix/urgent-fix"));
-            config.setSquashCommits(true);
-            config.setPushAfterMerge(true);
-            config.setDeleteSourceBranch(false);
-            config.setCommitMessage("Merge da feature para múltiplas branches");
-            
-            // Executando o merge
-            GitMultiMergeService mergeService = project.getService(GitMultiMergeService.class);
-            mergeService.executeMultiMerge(config, project, 
-                success -> Messages.showInfoMessage("Merge concluído com sucesso!", "Multi Merge"),
-                error -> Messages.showErrorDialog("Erro no merge: " + error, "Multi Merge Error")
-            );
-        }
+import com.intellij.openapi.actionSystem.AnAction;
+import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.Messages;
+import com.plugin.gitmultimerge.command.GitMultiMergeAction;
+import com.plugin.gitmultimerge.service.interfaces.GitMultiMergeService;
+import java.util.Arrays;
+
+public class CustomMergeAction extends AnAction {
+    @Override
+    public void actionPerformed(AnActionEvent e) {
+        Project project = e.getProject();
+        if (project == null) return;
+        // Exemplo de uso do serviço de merge
+        GitMultiMergeService mergeService = project.getService(GitMultiMergeService.class);
+        // ... configurar e executar merge conforme a API real ...
+        Messages.showInfoMessage("Merge concluído com sucesso!", "Multi Merge");
     }
+}
 ```
+
+## 🚦 Validação de Alterações Não Commitadas
+
+O **Git Multi Merge** garante a integridade do seu repositório ao impedir operações de merge caso existam alterações não commitadas no diretório de trabalho.
+A detecção dessas alterações é feita utilizando a mesma API interna do IntelliJ (ChangeListManager) responsável pela aba de commit, garantindo que qualquer modificação — seja ela staged, unstaged ou em arquivos ignorados — seja imediatamente reconhecida pelo plugin.
+
+**Como funciona:**
+- Antes de permitir o merge, o plugin verifica se há arquivos modificados, staged ou não, no repositório selecionado.
+- Se houver alterações pendentes, o botão de merge é desabilitado e uma mensagem de aviso é exibida ao usuário, orientando a fazer commit ou usar o Git Stash.
+- O merge só é liberado quando o diretório de trabalho estiver completamente limpo, evitando conflitos e operações inseguras.
+
+**Exemplo de mensagem exibida:**
+```
+Existem alterações não commitadas no diretório de trabalho atual.
+Para prosseguir com o merge, faça commit ou salve suas alterações usando o Git Stash.
+```
+
+---
+
+## 🔍 Busca de Branches com Placeholder
+
+Para facilitar a seleção de branches target, o campo de busca agora exibe um texto padrão (placeholder) internacionalizado, como "Filtrar branches..." "Filter branches..." ou "Filtrar ramas..." conforme o idioma da interface.
+
+---
+
+**Benefícios:**
+- Segurança total: evita merges acidentais com alterações locais não salvas.
+- Consistência: o comportamento do plugin é idêntico ao da interface de commit do IntelliJ.
+- Experiência fluida: a verificação é instantânea e o campo de busca é autoexplicativo, sem necessidade de refresh manual ou comandos externos.
+- Internacionalização: todas as mensagens e placeholders são exibidos no idioma da interface do usuário.
 

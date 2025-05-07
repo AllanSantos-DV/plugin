@@ -78,11 +78,11 @@ Para adicionar suporte a um novo idioma:
 ```properties
 # Chaves e valores em inglês (padrão)
 dialog.title=Git Multi Merge
-button.merge=Merge
+search.branch.placeholder=Filter branches...
 
 # As mesmas chaves em português
 dialog.title=Git Multi Merge
-button.merge=Mesclar
+search.branch.placeholder=Filtrar branches...
 ```
 
 ## Formatação Especial
