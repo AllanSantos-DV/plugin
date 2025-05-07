@@ -235,20 +235,21 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
         }
         if (!allFailedMerges.isEmpty()) {
             if (!summary.isEmpty())
-                summary.append("\n\n");
+                summary.append("<br>");
             summary.append(MessageBundle.message("summary.failed.merges",
                     String.join(", ", allFailedMerges)));
         }
+        String htmlSummary = "<html>" + summary + "</html>";
         if (allSuccessful) {
             NotificationHelper.notifySuccess(
                     project,
                     NotificationHelper.DEFAULT_TITLE,
-                    summary.toString());
+                    htmlSummary);
         } else {
             NotificationHelper.notifyWarning(
                     project,
                     NotificationHelper.DEFAULT_TITLE,
-                    summary.toString());
+                    htmlSummary);
         }
     }
 
