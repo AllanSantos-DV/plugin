@@ -211,3 +211,33 @@ Para dúvidas ou sugestões, entre em contato com o desenvolvedor através do e-
     }
 ```
 
+## 🚦 Validação de Alterações Não Commitadas
+
+O **Git Multi Merge** garante a integridade do seu repositório ao impedir operações de merge caso existam alterações não commitadas no diretório de trabalho.
+A detecção dessas alterações é feita utilizando a mesma API interna do IntelliJ (ChangeListManager) responsável pela aba de commit, garantindo que qualquer modificação — seja ela staged, unstaged ou em arquivos ignorados — seja imediatamente reconhecida pelo plugin.
+
+**Como funciona:**
+- Antes de permitir o merge, o plugin verifica se há arquivos modificados, staged ou não, no repositório selecionado.
+- Se houver alterações pendentes, o botão de merge é desabilitado e uma mensagem de aviso é exibida ao usuário, orientando a fazer commit ou usar o Git Stash.
+- O merge só é liberado quando o diretório de trabalho estiver completamente limpo, evitando conflitos e operações inseguras.
+
+**Exemplo de mensagem exibida:**
+```
+Existem alterações não commitadas no diretório de trabalho atual.
+Para prosseguir com o merge, faça commit ou salve suas alterações usando o Git Stash.
+```
+
+---
+
+## 🔍 Busca de Branches com Placeholder
+
+Para facilitar a seleção de branches target, o campo de busca agora exibe um texto padrão (placeholder) internacionalizado, como "Filtrar branches..." "Filter branches..." ou "Filtrar ramas..." conforme o idioma da interface.
+
+---
+
+**Benefícios:**
+- Segurança total: evita merges acidentais com alterações locais não salvas.
+- Consistência: o comportamento do plugin é idêntico ao da interface de commit do IntelliJ.
+- Experiência fluida: a verificação é instantânea e o campo de busca é autoexplicativo, sem necessidade de refresh manual ou comandos externos.
+- Internacionalização: todas as mensagens e placeholders são exibidos no idioma da interface do usuário.
+

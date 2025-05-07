@@ -126,6 +126,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
         JPanel targetPanel = new JPanel(new BorderLayout(0, 5));
         JPanel searchPanel = new JPanel(new BorderLayout());
         searchField = new JBTextField();
+        searchField.getEmptyText().setText(MessageBundle.message("search.branch.placeholder"));
         searchPanel.add(searchField, BorderLayout.CENTER);
         targetPanel.add(searchPanel, BorderLayout.NORTH);
 
@@ -219,7 +220,9 @@ public class GitMultiMergeDialog extends DialogWrapper {
         // Processar o resultado na EDT
         validationFuture.thenAcceptAsync(hasChanges -> {
             if (hasChanges) {
-                warningLabel.setText(MessageBundle.message("error.source.uncommitted.changes.message"));
+                String msg = MessageBundle.message("error.source.uncommitted.changes.message");
+                // Garante quebra de linha mesmo se vier \n do arquivo de mensagens
+                warningLabel.setText("<html>" + msg.replace("\\n", "<br>") + "</html>");
                 warningLabel.setVisible(true);
                 setOKActionEnabled(false);
             } else {
