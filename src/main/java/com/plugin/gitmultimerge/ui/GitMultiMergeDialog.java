@@ -7,8 +7,6 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.ComboBox;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.Messages;
-import com.intellij.openapi.vcs.changes.VcsDirtyScopeManager;
-import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.ui.DocumentAdapter;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBCheckBox;
@@ -66,9 +64,6 @@ public class GitMultiMergeDialog extends DialogWrapper {
         setOKActionEnabled(false);
 
         init();
-
-        // Verifica se a branch current tem alterações não commitadas
-        checkSourceBranchUncommittedChangesAsync();
     }
 
     @Nullable
@@ -116,10 +111,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
         warningLabel.setVisible(false);
         sourcePanel.add(warningLabel, BorderLayout.SOUTH);
 
-        sourceBranchComboBox.addActionListener(e -> {
-            updateTargetList();
-            checkSourceBranchUncommittedChangesAsync();
-        });
+        sourceBranchComboBox.addActionListener(e -> updateTargetList());
 
         return sourcePanel;
     }
@@ -337,10 +329,6 @@ public class GitMultiMergeDialog extends DialogWrapper {
 
     @Override
     public void show() {
-        VirtualFile root = repository.getRoot();
-        root.refresh(false, true);
-        // Força atualização do VCS para garantir que o status do repositório está atualizado
-        VcsDirtyScopeManager.getInstance(project).markEverythingDirty();
         checkSourceBranchUncommittedChangesAsync();
         super.show();
     }

@@ -10,6 +10,8 @@ import git4idea.GitRemoteBranch;
 import git4idea.commands.*;
 import git4idea.repo.GitRepository;
 import org.jetbrains.annotations.NotNull;
+import com.intellij.openapi.vcs.changes.ChangeListManager;
+import com.intellij.openapi.vfs.VirtualFile;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -188,12 +190,11 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
      */
     @Override
     public boolean hasUncommittedChanges(@NotNull GitRepository repository) {
-        GitLineHandler statusHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.STATUS);
-        statusHandler.addParameters("--porcelain");
-        GitCommandResult statusResult = git.runCommand(statusHandler);
-
-        // Se a saída não estiver vazia, significa que há alterações não commitadas
-        return statusResult.getOutput().stream().anyMatch(line -> !line.trim().isEmpty());
+        ChangeListManager changeListManager = ChangeListManager.getInstance(project);
+        VirtualFile root = repository.getRoot();
+        // Verifica se há arquivos modificados, staged ou não, no repositório
+        return changeListManager.getAffectedFiles().stream()
+                .anyMatch(file -> file.getPath().startsWith(root.getPath()));
     }
 
     /**
