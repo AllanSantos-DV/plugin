@@ -143,9 +143,9 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
             }
 
             if (shouldDelete) {
-                boolean deleted = handleDeleteSourceBranch(repository, sourceBranch, originalBranch, squash,
+                deleteSourceBranch = handleDeleteSourceBranch(repository, sourceBranch, originalBranch,
+                        targetBranches.get(0), squash,
                         pushAfterMerge, commitMessage, indicator);
-                result.anyDelete = result.anyDelete || deleted;
             } else if (deleteSourceBranch) {
                 NotificationHelper.notifyWarning(
                         project,
@@ -153,7 +153,7 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
                         MessageBundle.message("summary.delete.skipped"));
             }
 
-            handleFetchIfNeeded(repository, result.anyPush, result.anyDelete);
+            handleFetchIfNeeded(repository, pushAfterMerge, deleteSourceBranch);
             notifySummary(result.allSuccessfulMerges, result.allFailedMerges, result.allSuccessful);
             future.complete(result.allSuccessful);
         } catch (Exception e) {
@@ -167,8 +167,6 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
         final List<String> allSuccessfulMerges = new ArrayList<>();
         final List<String> allFailedMerges = new ArrayList<>();
         boolean allSuccessful = true;
-        boolean anyPush = false;
-        boolean anyDelete = false;
     }
 
     /** Processa o merge para todas as branches target. */
@@ -190,6 +188,7 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
             MergeStep[] steps = new MergeStep[] {
                     new ValidateUncommittedChangesStep(),
                     new CheckoutBranchStep(gitOps),
+                    new PushBranchStep(gitOps),
                     new CheckUpToDateStep(gitOps),
                     new PerformMergeStep(gitOps),
                     new PushBranchStep(gitOps)
@@ -203,9 +202,6 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
             result.allFailedMerges.addAll(context.failedMerges);
             if (!context.allSuccessful) {
                 result.allSuccessful = false;
-            }
-            if (pushAfterMerge) {
-                result.anyPush = true;
             }
         }
         return result;
@@ -231,19 +227,20 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
             GitRepository repository,
             String sourceBranch,
             String originalBranch,
+            String targetBranch,
             boolean squash,
             boolean pushAfterMerge,
             String commitMessage,
             ProgressIndicator indicator) {
         return new DeleteSourceBranchStep(gitOps, originalBranch).execute(
-                new MergeContext(project, repository, sourceBranch, originalBranch, squash, pushAfterMerge,
+                new MergeContext(project, repository, sourceBranch, targetBranch, squash, pushAfterMerge,
                         true, commitMessage, indicator));
     }
 
     /** Executa fetch --all se houve push ou deleção. */
-    private void handleFetchIfNeeded(GitRepository repository, boolean anyPush, boolean anyDelete) {
-        if (anyPush || anyDelete) {
-            gitOps.fetchAll(repository);
+    private void handleFetchIfNeeded(GitRepository repository, boolean pushAfterMerge, boolean anyDelete) {
+        if (pushAfterMerge || anyDelete) {
+            gitOps.fetchAll(repository, anyDelete);
         }
     }
 

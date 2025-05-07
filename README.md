@@ -94,6 +94,27 @@ Essa separação facilita a manutenção, testes e futuras expansões.
 - **Processamento em background** para melhor performance
 - **Atualizações de UI thread-safe**
 
+---
+
+### Novidades e Melhorias Recentes
+
+- **Sincronização Automática com a Interface do IntelliJ:**  
+  Após operações como checkout, push, fetch e deleção de branch, o plugin força a atualização do repositório na interface do IntelliJ, garantindo que todas as mudanças sejam refletidas imediatamente para o usuário.
+
+- **Deleção Segura da Branch Source:**  
+  O plugin detecta automaticamente se a branch source a ser deletada está ativa e realiza o checkout para uma branch segura antes de tentar a deleção, evitando erros de worktree.
+
+- **Push Inteligente para o Remote:**  
+  O push para o remote verifica se a branch remota já existe. Se não existir, faz push com upstream (`-u`), criando e rastreando a branch remota automaticamente.
+
+- **Atualização Completa de Referências Remotas:**  
+  O comando `fetchAll` executa `git fetch --all --prune` e, em seguida, atualiza o repositório na IDE, garantindo que branches deletadas ou criadas remotamente apareçam corretamente na interface.
+
+- **Internacionalização Robusta:**  
+  Todas as mensagens e notificações do plugin são internacionalizadas, com arquivos `.properties` para inglês, português do Brasil e espanhol. Novas chaves são sempre adicionadas de forma consistente.
+
+> Consulte a seção [Fluxo de trabalho completo do plugin](#fluxo-de-trabalho-completo-do-plugin) para detalhes de cada etapa.
+
 ## Requisitos
 
 - IntelliJ IDEA 2023.1 ou superior (Community ou Ultimate)

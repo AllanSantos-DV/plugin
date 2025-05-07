@@ -8,6 +8,7 @@ import git4idea.commands.GitCommand;
 import git4idea.commands.GitCommandResult;
 import git4idea.commands.GitLineHandler;
 import git4idea.repo.GitRepository;
+import git4idea.repo.GitRepositoryManager;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -51,10 +52,21 @@ public class GitRepositoryOperationsImpl implements GitRepositoryOperations {
         return result;
     }
 
-    /** Realiza push da branch especificada para o remote. */
+    /**
+     * Realiza push da branch especificada para o remote, com opção de setUpstream.
+     *
+     * @param repository  Repositório Git alvo.
+     * @param branchName  Nome da branch para push.
+     * @param setUpstream Se true, adiciona o parâmetro -u para criar e rastrear a
+     *                    branch remota.
+     * @return Resultado do comando Git.
+     */
     @Override
-    public GitCommandResult push(@NotNull GitRepository repository, @NotNull String branchName) {
+    public GitCommandResult push(@NotNull GitRepository repository, @NotNull String branchName, boolean setUpstream) {
         GitLineHandler handler = new GitLineHandler(project, repository.getRoot(), GitCommand.PUSH);
+        if (setUpstream) {
+            handler.addParameters("-u");
+        }
         handler.addParameters("origin", branchName);
         return git.runCommand(handler);
     }
@@ -104,9 +116,15 @@ public class GitRepositoryOperationsImpl implements GitRepositoryOperations {
     /**
      * Executa git fetch --all para atualizar referências remotas.
      */
-    public void fetchAll(@NotNull GitRepository repository) {
+    @Override
+    public void fetchAll(@NotNull GitRepository repository, boolean deletedBranches) {
         GitLineHandler handler = new GitLineHandler(project, repository.getRoot(), GitCommand.FETCH);
         handler.addParameters("--all");
+        if (deletedBranches) {
+            handler.addParameters("--prune");
+        }
         git.runCommand(handler);
+        // Atualiza o repositório na IDE após o fetch
+        GitRepositoryManager.getInstance(project).updateRepository(repository.getRoot());
     }
 }

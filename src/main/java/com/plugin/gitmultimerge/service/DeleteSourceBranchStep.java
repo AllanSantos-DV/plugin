@@ -6,6 +6,7 @@ import com.plugin.gitmultimerge.util.MessageBundle;
 import com.plugin.gitmultimerge.util.NotificationHelper;
 import git4idea.GitRemoteBranch;
 import git4idea.commands.GitCommandResult;
+import git4idea.repo.GitRepositoryManager;
 
 /**
  * Etapa que deleta a branch source local e remota, se necessário.
@@ -28,6 +29,8 @@ public class DeleteSourceBranchStep implements MergeStep {
             // Tentar checkout automático para a target
             GitCommandResult checkoutOk = service.checkout(context.repository, context.targetBranch);
             if (checkoutOk.success()) {
+                // Forçar atualização do repositório no IntelliJ
+                GitRepositoryManager.getInstance(context.project).updateRepository(context.repository.getRoot());
                 NotificationHelper.notifyInfo(
                         context.project,
                         NotificationHelper.DEFAULT_TITLE,
