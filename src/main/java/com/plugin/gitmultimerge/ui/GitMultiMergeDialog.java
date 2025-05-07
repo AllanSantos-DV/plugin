@@ -225,12 +225,10 @@ public class GitMultiMergeDialog extends DialogWrapper {
         // Processar o resultado na EDT
         validationFuture.thenAcceptAsync(hasChanges -> {
             if (hasChanges) {
-                // Mostra mensagem de aviso
                 warningLabel.setText(MessageBundle.message("error.source.uncommitted.changes.message"));
                 warningLabel.setVisible(true);
                 setOKActionEnabled(false);
             } else {
-                // Esconde a mensagem de aviso
                 warningLabel.setVisible(false);
                 setOKActionEnabled(true);
             }

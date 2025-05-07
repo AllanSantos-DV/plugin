@@ -188,6 +188,7 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
      */
     @Override
     public boolean hasUncommittedChanges(@NotNull GitRepository repository) {
+        repository.update();
         GitLineHandler statusHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.STATUS);
         statusHandler.addParameters("--porcelain");
         GitCommandResult statusResult = git.runCommand(statusHandler);
