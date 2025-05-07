@@ -1,4 +1,4 @@
-package com.plugin.gitmultimerge.service;
+package com.plugin.gitmultimerge.service.interfaces;
 
 import com.intellij.openapi.progress.ProgressIndicator;
 import git4idea.repo.GitRepository;

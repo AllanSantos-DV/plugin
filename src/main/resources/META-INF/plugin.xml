@@ -78,7 +78,7 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- Registro do serviço que implementa a lógica de negócio -->
-        <projectService serviceInterface="com.plugin.gitmultimerge.service.GitMultiMergeService" 
+        <projectService serviceInterface="com.plugin.gitmultimerge.service.interfaces.GitMultiMergeService"
                         serviceImplementation="com.plugin.gitmultimerge.service.GitMultiMergeServiceImpl"/>
         
         <!-- Grupo de notificações para o plugin -->

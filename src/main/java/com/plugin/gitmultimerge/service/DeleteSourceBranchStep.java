@@ -1,5 +1,7 @@
 package com.plugin.gitmultimerge.service;
 
+import com.plugin.gitmultimerge.service.interfaces.GitRepositoryOperations;
+import com.plugin.gitmultimerge.service.interfaces.MergeStep;
 import com.plugin.gitmultimerge.util.MessageBundle;
 import com.plugin.gitmultimerge.util.NotificationHelper;
 import git4idea.GitRemoteBranch;
@@ -9,10 +11,10 @@ import git4idea.commands.GitCommandResult;
  * Etapa que deleta a branch source local e remota, se necessário.
  */
 public class DeleteSourceBranchStep implements MergeStep {
-    private final GitMultiMergeServiceImpl service;
+    private final GitRepositoryOperations service;
     private final String originalBranch;
 
-    public DeleteSourceBranchStep(GitMultiMergeServiceImpl service, String originalBranch) {
+    public DeleteSourceBranchStep(GitRepositoryOperations service, String originalBranch) {
         this.service = service;
         this.originalBranch = originalBranch;
     }

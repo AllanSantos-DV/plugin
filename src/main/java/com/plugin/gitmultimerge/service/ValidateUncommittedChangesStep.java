@@ -1,5 +1,6 @@
 package com.plugin.gitmultimerge.service;
 
+import com.plugin.gitmultimerge.service.interfaces.MergeStep;
 import com.plugin.gitmultimerge.util.MessageBundle;
 import com.plugin.gitmultimerge.util.NotificationHelper;
 

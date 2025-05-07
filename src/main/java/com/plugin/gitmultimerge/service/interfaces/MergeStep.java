@@ -1,4 +1,6 @@
-package com.plugin.gitmultimerge.service;
+package com.plugin.gitmultimerge.service.interfaces;
+
+import com.plugin.gitmultimerge.service.MergeContext;
 
 /**
  * Representa uma etapa atômica do fluxo de multi-merge.

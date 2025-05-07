@@ -3,11 +3,12 @@ package com.plugin.gitmultimerge.service;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.project.Project;
+import com.plugin.gitmultimerge.service.interfaces.GitMultiMergeService;
+import com.plugin.gitmultimerge.service.interfaces.GitRepositoryOperations;
+import com.plugin.gitmultimerge.service.interfaces.MergeStep;
 import com.plugin.gitmultimerge.util.NotificationHelper;
 import com.plugin.gitmultimerge.util.MessageBundle;
 import git4idea.GitLocalBranch;
-import git4idea.GitRemoteBranch;
-import git4idea.commands.*;
 import git4idea.repo.GitRepository;
 import org.jetbrains.annotations.NotNull;
 import com.intellij.openapi.vcs.changes.ChangeListManager;
@@ -26,11 +27,11 @@ import java.util.concurrent.CompletableFuture;
 public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
 
     private final Project project;
-    private final Git git;
+    private final GitRepositoryOperations gitOps;
 
     public GitMultiMergeServiceImpl(Project project) {
         this.project = project;
-        this.git = Git.getInstance();
+        this.gitOps = new GitRepositoryOperationsImpl(project);
     }
 
     @Override
@@ -118,10 +119,10 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
 
                 MergeStep[] steps = new MergeStep[] {
                         new ValidateUncommittedChangesStep(),
-                        new CheckoutBranchStep(this),
-                        new CheckUpToDateStep(this),
-                        new PerformMergeStep(this),
-                        new PushBranchStep(this)
+                        new CheckoutBranchStep(gitOps),
+                        new CheckUpToDateStep(gitOps),
+                        new PerformMergeStep(gitOps),
+                        new PushBranchStep(gitOps)
                 };
                 for (MergeStep step : steps) {
                     if (!step.execute(context)) {
@@ -137,10 +138,10 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
 
             indicator.setText(MessageBundle.message("progress.returning"));
             indicator.setFraction(1.0);
-            new ReturnToOriginalBranchStep(this, originalBranch).execute(
+            new ReturnToOriginalBranchStep(gitOps, originalBranch).execute(
                     new MergeContext(project, repository, sourceBranch, originalBranch, squash, pushAfterMerge,
                             deleteSourceBranch, commitMessage, indicator));
-            new DeleteSourceBranchStep(this, originalBranch).execute(
+            new DeleteSourceBranchStep(gitOps, originalBranch).execute(
                     new MergeContext(project, repository, sourceBranch, originalBranch, squash, pushAfterMerge,
                             deleteSourceBranch, commitMessage, indicator));
 
@@ -195,99 +196,5 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
         // Verifica se há arquivos modificados, staged ou não, no repositório
         return changeListManager.getAffectedFiles().stream()
                 .anyMatch(file -> file.getPath().startsWith(root.getPath()));
-    }
-
-    /**
-     * Verifica se há alterações pendentes entre a branch atual e a branch de origem
-     * 
-     * @return true se existem alterações, false se as branches estão idênticas
-     */
-    public boolean hasPendingChanges(@NotNull GitRepository repository, @NotNull String sourceBranch) {
-        GitLineHandler diffHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.DIFF);
-        diffHandler.addParameters(sourceBranch, "--name-only");
-        GitCommandResult diffResult = git.runCommand(diffHandler);
-
-        // Retorna true se houver pelo menos uma linha não vazia na saída do diff
-        return diffResult.getOutput().stream().anyMatch(line -> !line.trim().isEmpty());
-    }
-
-    /**
-     * Faz o checkout para uma branch específica
-     */
-    public GitCommandResult checkout(@NotNull GitRepository repository, @NotNull String branchName) {
-        GitLineHandler handler = new GitLineHandler(project, repository.getRoot(), GitCommand.CHECKOUT);
-        handler.addParameters(branchName);
-        return git.runCommand(handler);
-    }
-
-    /**
-     * Executa o merge com a branch source
-     */
-    public GitCommandResult merge(@NotNull GitRepository repository, @NotNull String sourceBranch,
-            boolean squash, String commitMessage) {
-        // Processo normal de merge
-        GitLineHandler handler = new GitLineHandler(project, repository.getRoot(), GitCommand.MERGE);
-
-        if (squash) {
-            handler.addParameters("--squash");
-        }
-
-        handler.addParameters(sourceBranch);
-
-        GitCommandResult result = git.runCommand(handler);
-
-        // Se foi com squash e deu sucesso, precisamos fazer o commit
-        if (squash && result.success()) {
-            GitLineHandler commitHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.COMMIT);
-            commitHandler.addParameters("--no-edit");
-
-            if (commitMessage != null && !commitMessage.isEmpty()) {
-                commitHandler.addParameters("-m", commitMessage);
-            }
-
-            return git.runCommand(commitHandler);
-        }
-
-        return result;
-    }
-
-    /**
-     * Faz push da branch atual
-     */
-    public GitCommandResult push(@NotNull GitRepository repository, @NotNull String branchName) {
-        GitLineHandler handler = new GitLineHandler(project, repository.getRoot(), GitCommand.PUSH);
-        handler.addParameters("origin", branchName);
-        return git.runCommand(handler);
-    }
-
-    /**
-     * Deleta uma branch local
-     */
-    public GitCommandResult deleteBranch(@NotNull GitRepository repository, @NotNull String branchName) {
-        GitLineHandler handler = new GitLineHandler(project, repository.getRoot(), GitCommand.BRANCH);
-        handler.addParameters("-D", branchName);
-        return git.runCommand(handler);
-    }
-
-    /**
-     * Encontra a branch remota correspondente a uma branch local
-     */
-    public GitRemoteBranch findRemoteBranch(@NotNull GitRepository repository, @NotNull String localBranchName) {
-        for (GitRemoteBranch remoteBranch : repository.getBranches().getRemoteBranches()) {
-            if (remoteBranch.getNameForLocalOperations().equals("origin/" + localBranchName)) {
-                return remoteBranch;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Deleta uma branch remota
-     */
-    GitCommandResult deleteRemoteBranch(@NotNull GitRepository repository,
-            @NotNull GitRemoteBranch remoteBranch) {
-        GitLineHandler handler = new GitLineHandler(project, repository.getRoot(), GitCommand.PUSH);
-        handler.addParameters("origin", "--delete", remoteBranch.getNameForRemoteOperations());
-        return git.runCommand(handler);
     }
 }

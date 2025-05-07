@@ -15,7 +15,7 @@ import com.intellij.ui.components.JBList;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBTextField;
 import com.intellij.util.ui.JBUI;
-import com.plugin.gitmultimerge.service.GitMultiMergeService;
+import com.plugin.gitmultimerge.service.interfaces.GitMultiMergeService;
 
 import com.plugin.gitmultimerge.util.MessageBundle;
 import com.plugin.gitmultimerge.util.NotificationHelper;

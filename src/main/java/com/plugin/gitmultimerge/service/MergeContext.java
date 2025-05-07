@@ -7,7 +7,8 @@ import java.util.List;
 import java.util.ArrayList;
 
 /**
- * Contexto compartilhado entre as etapas do processo de multi-merge.
+ * Contexto compartilhado entre as etapas do multi-merge.
+ * Armazena parâmetros, progresso e resultados do fluxo.
  */
 public class MergeContext {
     public final Project project;
@@ -20,7 +21,7 @@ public class MergeContext {
     public final String commitMessage;
     public final ProgressIndicator indicator;
 
-    // Listas para registrar resultados
+    // Resultados do merge
     public final List<String> successfulMerges = new ArrayList<>();
     public final List<String> failedMerges = new ArrayList<>();
 

@@ -1,5 +1,7 @@
 package com.plugin.gitmultimerge.service;
 
+import com.plugin.gitmultimerge.service.interfaces.GitRepositoryOperations;
+import com.plugin.gitmultimerge.service.interfaces.MergeStep;
 import com.plugin.gitmultimerge.util.MessageBundle;
 import com.plugin.gitmultimerge.util.NotificationHelper;
 import git4idea.commands.GitCommandResult;
@@ -8,9 +10,9 @@ import git4idea.commands.GitCommandResult;
  * Etapa que realiza o push da branch target, se necessário.
  */
 public class PushBranchStep implements MergeStep {
-    private final GitMultiMergeServiceImpl service;
+    private final GitRepositoryOperations service;
 
-    public PushBranchStep(GitMultiMergeServiceImpl service) {
+    public PushBranchStep(GitRepositoryOperations service) {
         this.service = service;
     }
 

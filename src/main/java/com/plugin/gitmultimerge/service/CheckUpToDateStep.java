@@ -1,5 +1,7 @@
 package com.plugin.gitmultimerge.service;
 
+import com.plugin.gitmultimerge.service.interfaces.GitRepositoryOperations;
+import com.plugin.gitmultimerge.service.interfaces.MergeStep;
 import com.plugin.gitmultimerge.util.MessageBundle;
 import com.plugin.gitmultimerge.util.NotificationHelper;
 
@@ -7,9 +9,9 @@ import com.plugin.gitmultimerge.util.NotificationHelper;
  * Etapa que verifica se a branch target já está atualizada em relação à source.
  */
 public class CheckUpToDateStep implements MergeStep {
-    private final GitMultiMergeServiceImpl service;
+    private final GitRepositoryOperations service;
 
-    public CheckUpToDateStep(GitMultiMergeServiceImpl service) {
+    public CheckUpToDateStep(GitRepositoryOperations service) {
         this.service = service;
     }
 

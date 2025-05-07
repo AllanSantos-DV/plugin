@@ -1,6 +1,27 @@
 # Git Multi Merge Plugin
 
-Plugin para IntelliJ IDEA que permite realizar o merge de uma branch source para múltiplas branches target simultaneamente, com opções de push automático e limpeza de branches.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+Plugin para IntelliJ IDEA que permite realizar o merge de uma branch source para múltiplas branches target simultaneamente, com opções de push automático e limpeza de branches. Estruturado de forma modular, seguindo boas práticas de arquitetura e responsabilidade única.
+
+## Índice
+- [Estrutura de Pacotes](#estrutura-de-pacotes)
+- [Arquitetura](#arquitetura)
+- [Screenshots](#screenshots)
+- [Funcionalidades](#funcionalidades)
+- [Requisitos](#requisitos)
+- [Instalação Manual](#instalação-manual)
+- [Como Usar](#como-usar)
+- [Interface Redesenhada](#interface-redesenhada)
+- [Fluxo de trabalho completo do plugin](#fluxo-de-trabalho-completo-do-plugin)
+- [Suporte a Múltiplos Idiomas](#suporte-a-múltiplos-idiomas)
+- [Solução de problemas](#solução-de-problemas)
+- [Limitações](#limitações)
+- [Contribuição](#contribuição)
+- [Versões](#versões)
+- [Licença](#licença)
+- [Contato](#contato)
+- [Exemplo de uso](#exemplo-de-uso)
 
 ## Estrutura de Pacotes
 
@@ -15,27 +36,39 @@ src/
           gitmultimerge/
             command/   # Ações encapsuladas (Command Pattern)
               GitMultiMergeAction.java
-            service/   # Serviços de negócio e integrações
-              GitMultiMergeService.java
+            service/   # Serviços de negócio, integrações e contratos
+              interface/   # Contratos (interfaces) do domínio de serviço
+                GitMultiMergeService.java
+                GitRepositoryOperations.java
+                MergeStep.java
               GitMultiMergeServiceImpl.java
+              GitRepositoryOperationsImpl.java
+              (demais etapas e contextos do fluxo de merge)
             ui/        # Componentes de interface gráfica
               GitMultiMergeDialog.java
             util/      # Utilitários e helpers
               MessageBundle.java
               NotificationHelper.java
-            builder/   # (Reservado para Builders)
-            factory/   # (Reservado para Fábricas)
-            observer/  # (Reservado para Observers)
-            strategy/  # (Reservado para Estratégias)
 ```
 
 - **command/**: Contém ações do plugin, como a ação principal de merge.
-- **service/**: Lógica de negócio, integrações e regras do plugin.
+- **service/interface/**: Contratos (interfaces) para serviços e operações Git.
+- **service/**: Implementações concretas, etapas do fluxo e contexto do merge.
 - **ui/**: Diálogos, painéis e componentes de interface.
 - **util/**: Classes utilitárias, helpers e internacionalização.
-- **builder/**, **factory/**, **observer/**, **strategy/**: Estrutura pronta para expansão futura conforme padrões de design.
 
-> **Observação:** Os pacotes reservados podem ser utilizados para futuras expansões, mantendo o projeto organizado e aderente a boas práticas.
+> **Observação:** Novos pacotes para padrões de design (ex: builder, factory, observer, strategy) devem ser criados apenas quando houver necessidade real de expansão, mantendo a estrutura enxuta e organizada.
+
+## Arquitetura
+
+O projeto segue uma arquitetura modular, separando claramente responsabilidades:
+
+- **UI (`ui/`)**: Responsável apenas pela exibição e interação com o usuário.
+- **Serviços (`service/` e `service/interface/`)**: Contêm a lógica de negócio, contratos e integrações com o Git.
+- **Comandos (`command/`)**: Ações disparadas pela interface do usuário.
+- **Utilitários (`util/`)**: Helpers para internacionalização e notificações.
+
+Essa separação facilita a manutenção, testes e futuras expansões.
 
 ## Screenshots
 
@@ -97,6 +130,11 @@ src/
 8. Resolva conflitos, se necessário
 9. Verifique o resultado na notificação final
 
+### Dicas
+- Utilize o campo de busca para encontrar rapidamente branches em repositórios grandes.
+- O botão de merge só será habilitado se não houver alterações não commitadas.
+- Mensagens de feedback e erros são exibidas em tempo real na interface.
+
 ## Interface Redesenhada
 
 O plugin apresenta um novo design vertical (450x550 pixels) que melhora significativamente a experiência do usuário:
@@ -130,7 +168,7 @@ O idioma é detectado automaticamente com base no idioma configurado no IntelliJ
 
 - Settings/Preferences > Appearance & Behavior > Appearance > UI Options > Override default language
 
-Para mais detalhes sobre a internacionalização, consulte o arquivo [INTERNATIONALIZATION.md](INTERNATIONALIZATION.md).
+A internacionalização segue o padrão de arquivos de propriedades (`.properties`) e pode ser expandida facilmente para novos idiomas. Para mais detalhes, consulte o arquivo [INTERNATIONALIZATION.md](INTERNATIONALIZATION.md).
 
 ## Solução de problemas
 
@@ -140,6 +178,7 @@ Para mais detalhes sobre a internacionalização, consulte o arquivo [INTERNATIO
 - Verifique sua conexão com o remote antes de usar as funcionalidades de push/delete remotas
 - Se as alterações não aparecerem no remote após o merge, verifique se a opção "Push para remote após o merge" está habilitada
 - Para problemas de idioma, verifique se o IntelliJ IDEA está configurado para usar o idioma de sua preferência
+- Para problemas de permissões de arquivos (especialmente em ambientes corporativos), verifique as permissões do sistema operacional e do repositório.
 
 ## Limitações
 
@@ -150,6 +189,8 @@ Para mais detalhes sobre a internacionalização, consulte o arquivo [INTERNATIO
 ## Contribuição
 
 Sinta-se à vontade para contribuir com este projeto através de pull requests ou reportando problemas.
+
+> Para detalhes sobre o fluxo de contribuição, consulte (ou crie) um arquivo CONTRIBUTING.md.
 
 ### Adicionando novos idiomas
 
@@ -177,38 +218,25 @@ Para dúvidas ou sugestões, entre em contato com o desenvolvedor através do e-
 ## Exemplo de uso
 
 ```java
-    import com.intellij.openapi.actionSystem.AnAction;
-    import com.intellij.openapi.actionSystem.AnActionEvent;
-    import com.intellij.openapi.project.Project;
-    import com.intellij.openapi.ui.Messages;
-    import br.com.allandevs.gitmerge.actions.MultiMergeAction;
-    import br.com.allandevs.gitmerge.model.MergeConfiguration;
-    import br.com.allandevs.gitmerge.service.GitMultiMergeService;
-    import java.util.Arrays;
-    
-    public class CustomMergeAction extends AnAction {
-        @Override
-        public void actionPerformed(AnActionEvent e) {
-            Project project = e.getProject();
-            if (project == null) return;
-            
-            // Configurando o merge programaticamente
-            MergeConfiguration config = new MergeConfiguration();
-            config.setSourceBranch("feature/nova-funcionalidade");
-            config.setTargetBranches(Arrays.asList("develop", "release/1.0", "hotfix/urgent-fix"));
-            config.setSquashCommits(true);
-            config.setPushAfterMerge(true);
-            config.setDeleteSourceBranch(false);
-            config.setCommitMessage("Merge da feature para múltiplas branches");
-            
-            // Executando o merge
-            GitMultiMergeService mergeService = project.getService(GitMultiMergeService.class);
-            mergeService.executeMultiMerge(config, project, 
-                success -> Messages.showInfoMessage("Merge concluído com sucesso!", "Multi Merge"),
-                error -> Messages.showErrorDialog("Erro no merge: " + error, "Multi Merge Error")
-            );
-        }
+import com.intellij.openapi.actionSystem.AnAction;
+import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.Messages;
+import com.plugin.gitmultimerge.command.GitMultiMergeAction;
+import com.plugin.gitmultimerge.service.interface.GitMultiMergeService;
+import java.util.Arrays;
+
+public class CustomMergeAction extends AnAction {
+    @Override
+    public void actionPerformed(AnActionEvent e) {
+        Project project = e.getProject();
+        if (project == null) return;
+        // Exemplo de uso do serviço de merge
+        GitMultiMergeService mergeService = project.getService(GitMultiMergeService.class);
+        // ... configurar e executar merge conforme a API real ...
+        Messages.showInfoMessage("Merge concluído com sucesso!", "Multi Merge");
     }
+}
 ```
 
 ## 🚦 Validação de Alterações Não Commitadas
