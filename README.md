@@ -72,7 +72,26 @@ Essa separação facilita a manutenção, testes e futuras expansões.
 
 ## Screenshots
 
-![Tela de seleção de branches](images/screenshots/branch-selection.png)
+<div>
+  <table>
+    <tr>
+        <td>
+            <img src="images/screenshots/branch-selection.png" alt="Seleção de Branches" width="924"/><br>
+            <sub>Seleção de Branches</sub>
+        </td>
+        <td>
+            <img src="images/screenshots/branch-selection-changes.png" alt="Branches com Alterações" width="924"/><br>
+            <sub>Branches com Alterações</sub>
+        </td>
+        <td>
+            <img src="images/screenshots/notify.png" alt="Notificação de Sucesso" width="1280"/><br>
+            <sub>Notificação de Sucesso</sub>
+            <img src="images/screenshots/notify-error.png" alt="Notificação de Erro" width="1280"/><br>
+            <sub>Notificação de Erro</sub>
+        </td>
+    </tr>
+  </table>
+</div>
 
 ## Funcionalidades
 
