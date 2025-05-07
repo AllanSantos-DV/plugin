@@ -34,6 +34,12 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
         this.gitOps = new GitRepositoryOperationsImpl(project);
     }
 
+    /**
+     * Lista os nomes das branches locais do repositório.
+     *
+     * @param repository Repositório Git alvo.
+     * @return Lista de nomes das branches locais.
+     */
     @Override
     public List<String> getBranchNames(GitRepository repository) {
         List<String> branchNames = new ArrayList<>();
@@ -46,6 +52,21 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
         return branchNames;
     }
 
+    /**
+     * Executa o merge da branch source para múltiplas branches target.
+     * Opera de forma assíncrona e notifica o progresso.
+     *
+     * @param repository         Repositório Git alvo.
+     * @param sourceBranch       Nome da branch source.
+     * @param targetBranches     Lista de branches target.
+     * @param squash             Se true, faz squash dos commits.
+     * @param pushAfterMerge     Se true, faz push após cada merge.
+     * @param deleteSourceBranch Se true, deleta a branch source após merges
+     *                           bem-sucedidos.
+     * @param commitMessage      Mensagem de commit para squash.
+     * @param indicator          Indicador de progresso.
+     * @return CompletableFuture indicando sucesso ou falha da operação.
+     */
     @Override
     public CompletableFuture<Boolean> performMerge(
             GitRepository repository,
@@ -263,10 +284,11 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
     }
 
     /**
-     * Verifica se há alterações não commitadas no working directory
-     * 
+     * Verifica se há alterações não commitadas no working directory.
+     *
+     * @param repository Repositório Git alvo.
      * @return true se existem alterações não commitadas, false se o working
-     *         directory está limpo
+     *         directory está limpo.
      */
     @Override
     public boolean hasUncommittedChanges(@NotNull GitRepository repository) {

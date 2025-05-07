@@ -25,11 +25,22 @@ public class DeleteSourceBranchStep implements MergeStep {
             return true; // Não precisa deletar
         }
         if (originalBranch.equals(context.sourceBranch)) {
-            NotificationHelper.notifyWarning(
-                    context.project,
-                    NotificationHelper.DEFAULT_TITLE,
-                    MessageBundle.message("error.current.branch", context.sourceBranch));
-            return true;
+            // Tentar checkout automático para a target
+            GitCommandResult checkoutOk = service.checkout(context.repository, context.targetBranch);
+            if (checkoutOk.success()) {
+                NotificationHelper.notifyInfo(
+                        context.project,
+                        NotificationHelper.DEFAULT_TITLE,
+                        MessageBundle.message("info.checkout.before.delete", context.targetBranch,
+                                context.sourceBranch));
+            } else {
+                NotificationHelper.notifyWarning(
+                        context.project,
+                        NotificationHelper.DEFAULT_TITLE,
+                        MessageBundle.message("error.checkout.before.delete", context.targetBranch,
+                                context.sourceBranch));
+                return true;
+            }
         }
         GitRemoteBranch remoteBranch = service.findRemoteBranch(context.repository, context.sourceBranch);
         GitCommandResult deleteResult = service.deleteBranch(context.repository, context.sourceBranch);
