@@ -29,6 +29,14 @@ public interface GitRepositoryOperations {
     /** Deleta a branch remota especificada. */
     GitCommandResult deleteRemoteBranch(@NotNull GitRepository repository, @NotNull GitRemoteBranch remoteBranch);
 
-    /** Verifica se há alterações pendentes entre a branch atual e a branch de origem. */
+    /**
+     * Verifica se há alterações pendentes entre a branch atual e a branch de
+     * origem.
+     */
     boolean hasPendingChanges(@NotNull GitRepository repository, @NotNull String sourceBranch);
+
+    /**
+     * Executa git fetch --all para atualizar referências remotas.
+     */
+    void fetchAll(@NotNull GitRepository repository);
 }

@@ -87,7 +87,10 @@ public class GitRepositoryOperationsImpl implements GitRepositoryOperations {
         return git.runCommand(handler);
     }
 
-    /** Verifica se há alterações pendentes entre a branch atual e a branch de origem. */
+    /**
+     * Verifica se há alterações pendentes entre a branch atual e a branch de
+     * origem.
+     */
     @Override
     public boolean hasPendingChanges(@NotNull GitRepository repository, @NotNull String sourceBranch) {
         GitLineHandler diffHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.DIFF);
@@ -96,5 +99,14 @@ public class GitRepositoryOperationsImpl implements GitRepositoryOperations {
 
         // Retorna true se houver pelo menos uma linha não vazia na saída do diff
         return diffResult.getOutput().stream().anyMatch(line -> !line.trim().isEmpty());
+    }
+
+    /**
+     * Executa git fetch --all para atualizar referências remotas.
+     */
+    public void fetchAll(@NotNull GitRepository repository) {
+        GitLineHandler handler = new GitLineHandler(project, repository.getRoot(), GitCommand.FETCH);
+        handler.addParameters("--all");
+        git.runCommand(handler);
     }
 }

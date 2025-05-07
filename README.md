@@ -200,8 +200,13 @@ src/main/resources/messages/GitMultiMergeBundle_XX.properties
 ```
 onde `XX` é o código do idioma (como fr, de, it, etc.).
 
+## Controle de Versão Centralizado
+
+A versão oficial do plugin é definida no arquivo `VERSION` na raiz do projeto. Sempre que for realizar um novo release, atualize este arquivo para garantir consistência entre build, plugin.xml e documentação.
+
 ## Versões
 
+- **1.3.0**: Refatoração do fluxo de merge para responsabilidade única, feedback internacionalizado, placeholder multilíngue na busca de branches, reorganização de pacotes, adição do arquivo de licença MIT e documentação aprimorada.
 - **1.2.1**: Validação assíncrona de alterações não commitadas, processamento em background e melhorias de performance
 - **1.2.0**: Suporte completo a internacionalização, interface redesenhada com layout vertical e compatibilidade com Java 17
 - **1.1.0**: Melhorias na interface e correções de bugs
@@ -223,7 +228,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
 import com.plugin.gitmultimerge.command.GitMultiMergeAction;
-import com.plugin.gitmultimerge.service.interface.GitMultiMergeService;
+import com.plugin.gitmultimerge.service.interfaces.GitMultiMergeService;
 import java.util.Arrays;
 
 public class CustomMergeAction extends AnAction {
