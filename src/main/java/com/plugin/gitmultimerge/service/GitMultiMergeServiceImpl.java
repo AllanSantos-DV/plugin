@@ -10,6 +10,7 @@ import git4idea.GitRemoteBranch;
 import git4idea.commands.*;
 import git4idea.repo.GitRepository;
 import org.jetbrains.annotations.NotNull;
+import com.intellij.openapi.vfs.VirtualFile;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -188,7 +189,6 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
      */
     @Override
     public boolean hasUncommittedChanges(@NotNull GitRepository repository) {
-        repository.update();
         GitLineHandler statusHandler = new GitLineHandler(project, repository.getRoot(), GitCommand.STATUS);
         statusHandler.addParameters("--porcelain");
         GitCommandResult statusResult = git.runCommand(statusHandler);

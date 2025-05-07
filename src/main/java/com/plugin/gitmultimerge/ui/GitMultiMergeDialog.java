@@ -7,6 +7,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.ComboBox;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.Messages;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.ui.DocumentAdapter;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBCheckBox;
@@ -335,6 +336,8 @@ public class GitMultiMergeDialog extends DialogWrapper {
 
     @Override
     public void show() {
+        VirtualFile root = repository.getRoot();
+        root.refresh(false, true);
         checkSourceBranchUncommittedChangesAsync();
         super.show();
     }
