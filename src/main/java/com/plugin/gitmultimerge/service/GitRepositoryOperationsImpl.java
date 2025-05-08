@@ -57,8 +57,7 @@ public class GitRepositoryOperationsImpl implements GitRepositoryOperations {
      *
      * @param repository  Repositório Git alvo.
      * @param branchName  Nome da branch para push.
-     * @param setUpstream Se true, adiciona o parâmetro -u para criar e rastrear a
-     *                    branch remota.
+     * @param setUpstream Se true, adiciona o parâmetro -u para criar e rastrear a branch remota.
      * @return Resultado do comando Git.
      */
     @Override
@@ -67,6 +66,20 @@ public class GitRepositoryOperationsImpl implements GitRepositoryOperations {
         if (setUpstream) {
             handler.addParameters("-u");
         }
+        handler.addParameters("origin", branchName);
+        return git.runCommand(handler);
+    }
+
+    /**
+     * Realiza o pull da branch especificada.
+     *
+     * @param repository Repositório Git alvo.
+     * @param branchName Nome da branch para pull.
+     * @return Resultado do comando Git.
+     */
+    @Override
+    public GitCommandResult pull(@NotNull GitRepository repository, @NotNull String branchName) {
+        GitLineHandler handler = new GitLineHandler(project, repository.getRoot(), GitCommand.PULL);
         handler.addParameters("origin", branchName);
         return git.runCommand(handler);
     }
