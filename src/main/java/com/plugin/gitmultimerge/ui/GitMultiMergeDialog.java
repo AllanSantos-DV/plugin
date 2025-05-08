@@ -11,9 +11,9 @@ import com.intellij.ui.DocumentAdapter;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBCheckBox;
 import com.intellij.ui.components.JBLabel;
-import com.intellij.ui.components.JBList;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBTextField;
+import com.intellij.ui.treeStructure.Tree;
 import com.intellij.util.ui.JBUI;
 import com.plugin.gitmultimerge.service.interfaces.GitMultiMergeService;
 
@@ -25,9 +25,11 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
+import javax.swing.tree.*;
 import java.awt.*;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import com.intellij.icons.AllIcons;
 
 /**
  * Diálogo para selecionar branches e configurar opções para o multi-merge.
@@ -39,13 +41,13 @@ public class GitMultiMergeDialog extends DialogWrapper {
     private final GitMultiMergeService gitService;
 
     private JComboBox<String> sourceBranchComboBox;
-    private JBList<String> targetBranchList;
+    private JTree targetBranchTree;
+    private DefaultMutableTreeNode targetTreeRoot;
     private JBTextField searchField;
     private JBCheckBox squashCheckBox;
     private JBCheckBox deleteSourceCheckBox;
     private JBCheckBox pushAfterMergeCheckBox;
     private JBTextField mergeCommitMessageField;
-    private DefaultListModel<String> targetListModel;
     private final List<String> allBranchNames;
     private JBLabel warningLabel; // Novo label para mostrar aviso de alterações não commitadas
 
@@ -111,7 +113,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
         warningLabel.setVisible(false);
         sourcePanel.add(warningLabel, BorderLayout.SOUTH);
 
-        sourceBranchComboBox.addActionListener(e -> updateTargetList());
+        sourceBranchComboBox.addActionListener(e -> updateTargetTree());
 
         return sourcePanel;
     }
@@ -130,26 +132,39 @@ public class GitMultiMergeDialog extends DialogWrapper {
         searchPanel.add(searchField, BorderLayout.CENTER);
         targetPanel.add(searchPanel, BorderLayout.NORTH);
 
-        targetListModel = new DefaultListModel<>();
-        targetBranchList = new JBList<>(targetListModel);
-        targetBranchList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        updateTargetList();
+        targetTreeRoot = new DefaultMutableTreeNode("branches");
+        targetBranchTree = new Tree(targetTreeRoot);
+        targetBranchTree.getSelectionModel().setSelectionMode(TreeSelectionModel.DISCONTIGUOUS_TREE_SELECTION);
+        targetBranchTree.setRootVisible(false);
+        targetBranchTree.setCellRenderer(new BranchTreeCellRenderer());
+        updateTargetTree();
 
         searchField.getDocument().addDocumentListener(new DocumentAdapter() {
             @Override
             protected void textChanged(@NotNull DocumentEvent e) {
-                updateTargetList();
+                updateTargetTree();
             }
         });
 
-        targetBranchList.addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting() && targetBranchList.getSelectedIndices().length > 5) {
-                targetBranchList.setSelectedIndices(
-                        java.util.Arrays.copyOf(targetBranchList.getSelectedIndices(), 5));
+        targetBranchTree.addTreeSelectionListener(e -> {
+            // Permitir seleção múltipla apenas em folhas e limitar a 5
+            TreePath[] paths = targetBranchTree.getSelectionPaths();
+            if (paths != null) {
+                List<TreePath> leafPaths = new java.util.ArrayList<>();
+                for (TreePath path : paths) {
+                    DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+                    if (node.isLeaf()) {
+                        leafPaths.add(path);
+                    }
+                }
+                if (leafPaths.size() > 5) {
+                    leafPaths = leafPaths.subList(0, 5);
+                }
+                targetBranchTree.setSelectionPaths(leafPaths.toArray(new TreePath[0]));
             }
         });
 
-        JBScrollPane targetScrollPane = new JBScrollPane(targetBranchList);
+        JBScrollPane targetScrollPane = new JBScrollPane(targetBranchTree);
         targetPanel.add(targetScrollPane, BorderLayout.CENTER);
         targetMainPanel.add(targetPanel, BorderLayout.CENTER);
         return targetMainPanel;
@@ -233,23 +248,98 @@ public class GitMultiMergeDialog extends DialogWrapper {
     }
 
     /**
-     * Atualiza a lista de branches target com base na branch source selecionada e
-     * texto de busca.
+     * Atualiza a árvore de branches target com base na branch source selecionada e
+     * texto de busca. Expande apenas os grupos relevantes.
      */
-    private void updateTargetList() {
+    private void updateTargetTree() {
         String sourceBranch = (String) sourceBranchComboBox.getSelectedItem();
         String searchText = searchField.getText();
-
-        targetListModel.clear();
-
+        targetTreeRoot.removeAllChildren();
         for (String branch : allBranchNames) {
-            // Não incluir a branch source na lista de targets
-            if (!branch.equals(sourceBranch) &&
-                    (searchText == null || searchText.isEmpty() ||
-                            branch.toLowerCase().contains(searchText.toLowerCase()))) {
-                targetListModel.addElement(branch);
+            if (!branch.equals(sourceBranch) && (searchText == null || searchText.isEmpty()
+                    || branch.toLowerCase().contains(searchText.toLowerCase()))) {
+                addBranchToTree(targetTreeRoot, branch);
             }
         }
+        ((DefaultTreeModel) targetBranchTree.getModel()).reload();
+        // Colapsa todos os nós
+        for (int i = 0; i < targetBranchTree.getRowCount(); i++) {
+            targetBranchTree.collapseRow(i);
+        }
+        // Expande apenas os grupos que têm folhas visíveis
+        expandAllWithLeaves(targetBranchTree, new TreePath(targetTreeRoot));
+    }
+
+    /**
+     * Expande recursivamente apenas os nós que possuem folhas.
+     */
+    private void expandAllWithLeaves(JTree tree, TreePath parent) {
+        DefaultMutableTreeNode node = (DefaultMutableTreeNode) parent.getLastPathComponent();
+        boolean hasLeaf = false;
+        for (int i = 0; i < node.getChildCount(); i++) {
+            DefaultMutableTreeNode child = (DefaultMutableTreeNode) node.getChildAt(i);
+            TreePath path = parent.pathByAddingChild(child);
+            if (child.isLeaf()) {
+                hasLeaf = true;
+            } else {
+                expandAllWithLeaves(tree, path);
+                if (child.getChildCount() > 0) {
+                    hasLeaf = true;
+                }
+            }
+        }
+        if (hasLeaf && parent.getPathCount() > 1) { // não expande root
+            tree.expandPath(parent);
+        }
+    }
+
+    /**
+     * Adiciona uma branch ao modelo de árvore, criando nós intermediários conforme
+     * necessário.
+     */
+    private void addBranchToTree(DefaultMutableTreeNode root, String branch) {
+        String[] parts = branch.split("/");
+        DefaultMutableTreeNode node = root;
+        for (String part : parts) {
+            DefaultMutableTreeNode child = null;
+            for (int j = 0; j < node.getChildCount(); j++) {
+                DefaultMutableTreeNode n = (DefaultMutableTreeNode) node.getChildAt(j);
+                if (n.getUserObject().equals(part)) {
+                    child = n;
+                    break;
+                }
+            }
+            if (child == null) {
+                child = new DefaultMutableTreeNode(part);
+                node.add(child);
+            }
+            node = child;
+        }
+    }
+
+    /**
+     * Retorna a lista de branches target selecionadas a partir do JTree.
+     */
+    private List<String> getSelectedTargetBranches() {
+        TreePath[] paths = targetBranchTree.getSelectionPaths();
+        List<String> selected = new java.util.ArrayList<>();
+        if (paths != null) {
+            for (TreePath path : paths) {
+                DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+                if (node.isLeaf()) {
+                    // Monta o nome completo da branch
+                    StringBuilder branchName = new StringBuilder();
+                    Object[] nodes = path.getPath();
+                    for (int i = 1; i < nodes.length; i++) { // ignora root
+                        if (!branchName.isEmpty())
+                            branchName.append("/");
+                        branchName.append(nodes[i].toString());
+                    }
+                    selected.add(branchName.toString());
+                }
+            }
+        }
+        return selected;
     }
 
     /**
@@ -259,13 +349,11 @@ public class GitMultiMergeDialog extends DialogWrapper {
     @Override
     protected void doOKAction() {
         String sourceBranch = (String) sourceBranchComboBox.getSelectedItem();
-        List<String> targetBranches = targetBranchList.getSelectedValuesList();
-
+        List<String> targetBranches = getSelectedTargetBranches();
         if (!validateSourceBranch(sourceBranch))
             return;
         if (!validateTargetBranches(sourceBranch, targetBranches))
             return;
-
         startMergeProcess(sourceBranch, targetBranches);
         super.doOKAction();
     }
@@ -334,5 +422,22 @@ public class GitMultiMergeDialog extends DialogWrapper {
     public void show() {
         checkSourceBranchUncommittedChangesAsync();
         super.show();
+    }
+
+    /**
+     * Renderer customizado para exibir ícones de pasta e branch.
+     */
+    private static class BranchTreeCellRenderer extends DefaultTreeCellRenderer {
+        @Override
+        public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean expanded,
+                boolean leaf, int row, boolean hasFocus) {
+            Component c = super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
+            if (leaf) {
+                setIcon(AllIcons.Vcs.Branch);
+            } else {
+                setIcon(AllIcons.Nodes.Folder);
+            }
+            return c;
+        }
     }
 }
