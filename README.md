@@ -43,6 +43,7 @@ src/
                 MergeStep.java
               GitMultiMergeServiceImpl.java
               GitRepositoryOperationsImpl.java
+              PullBranchStep.java  # Novo step: realiza git pull na branch target antes do merge
               (demais etapas e contextos do fluxo de merge)
             ui/        # Componentes de interface gráfica
               GitMultiMergeDialog.java
@@ -187,14 +188,15 @@ O plugin apresenta um novo design vertical (450x550 pixels) que melhora signific
 ## Fluxo de trabalho completo do plugin
 
 1. **Checkout** para cada branch target
-2. **Merge** da branch source para a branch target
-3. **Commit** automático após squash (se a opção estiver habilitada)
-4. **Push** para o remote (se a opção estiver habilitada)
-5. **Fetch com prune** para atualizar as informações do repositório
-6. **Checkout** para uma branch segura
-7. **Deleção** da branch source local (se solicitado e todos os merges forem bem-sucedidos)
-8. **Deleção** da branch source remota (se existir, for solicitado e todos os merges forem bem-sucedidos)
-9. **Notificação** do resultado com detalhes de cada operação
+2. **Pull** da branch target para garantir que está atualizada com o remote (novo step)
+3. **Merge** da branch source para a branch target
+4. **Commit** automático após squash (se a opção estiver habilitada)
+5. **Push** para o remote (se a opção estiver habilitada)
+6. **Fetch com prune** para atualizar as informações do repositório
+7. **Checkout** para uma branch segura
+8. **Deleção** da branch source local (se solicitado e todos os merges forem bem-sucedidos)
+9. **Deleção** da branch source remota (se existir, for solicitado e todos os merges forem bem-sucedidos)
+10. **Notificação** do resultado com detalhes de cada operação
 
 ## Suporte a Múltiplos Idiomas
 
