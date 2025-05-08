@@ -266,8 +266,9 @@ public class GitMultiMergeDialog extends DialogWrapper {
         for (int i = 0; i < targetBranchTree.getRowCount(); i++) {
             targetBranchTree.collapseRow(i);
         }
-        // Expande apenas os grupos que têm folhas visíveis
-        expandAllWithLeaves(targetBranchTree, new TreePath(targetTreeRoot));
+
+        if (searchText != null && !searchText.isEmpty())
+            expandAllWithLeaves(targetBranchTree, new TreePath(targetTreeRoot));
     }
 
     /**
