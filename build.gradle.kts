@@ -4,37 +4,32 @@ plugins {
 }
 
 group = "com.plugin"
-// Centraliza a versão lendo do arquivo VERSION
 version = file("VERSION").readText().trim()
 
 repositories {
     mavenCentral()
 }
 
-// Configuração da versão do IntelliJ IDEA e dependências
 intellij {
     version.set("2023.1")
-    type.set("IC") // IntelliJ IDEA Community Edition
+    type.set("IC")                 // Empacota para Community (IC) → roda em IC e IU
     plugins.set(listOf("Git4Idea"))
-    
-    // Necessário para internacionalização
     instrumentCode.set(false)
     downloadSources.set(true)
 }
 
 tasks {
     patchPluginXml {
-        sinceBuild.set("231") // IntelliJ IDEA 2023.1+
-        untilBuild.set("263.*") // Compatível com versões até 2026.3+
+        sinceBuild.set("231")
+        untilBuild.set("263.*")
     }
-    
+
     buildSearchableOptions {
         enabled = false
     }
-    
-    // Forçando o uso do Gradle 7.6
+
     wrapper {
-        gradleVersion = "7.6.2"
+        gradleVersion = "8.2"
         distributionType = Wrapper.DistributionType.ALL
     }
     
@@ -44,26 +39,21 @@ tasks {
         archiveVersion.set(project.version.toString())
         archiveClassifier.set("")
     }
-    
-    // Configurando o processamento de recursos para internacionalização
+
     processResources {
         duplicatesStrategy = DuplicatesStrategy.INCLUDE
-        
-        // Garantir que os arquivos de propriedades sejam copiados
         from("src/main/resources") {
             include("**/*.properties")
         }
     }
 }
 
-// Configuração do Java para UTF-8 e compatibilidade com IntelliJ IDEA 2023.1+
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
-    // Configurações para Java 17 (requerido pelo IntelliJ IDEA 2023.1)
     sourceCompatibility = "17"
     targetCompatibility = "17"
 }
 
 dependencies {
     testImplementation("junit:junit:4.13.2")
-} 
+}

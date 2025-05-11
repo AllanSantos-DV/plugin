@@ -7,12 +7,14 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.ComboBox;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.Messages;
+import com.intellij.ui.ComboboxSpeedSearch;
 import com.intellij.ui.DocumentAdapter;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBCheckBox;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBTextField;
+import com.intellij.ui.speedSearch.SpeedSearchSupply;
 import com.intellij.ui.treeStructure.Tree;
 import com.intellij.util.ui.JBUI;
 import com.plugin.gitmultimerge.service.interfaces.GitMultiMergeService;
@@ -25,9 +27,16 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 import javax.swing.tree.*;
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import com.intellij.icons.AllIcons;
 
@@ -40,7 +49,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
     private final GitRepository repository;
     private final GitMultiMergeService gitService;
 
-    private JComboBox<String> sourceBranchComboBox;
+    private ComboBox<String> sourceBranchComboBox;
     private JTree targetBranchTree;
     private DefaultMutableTreeNode targetTreeRoot;
     private JBTextField searchField;
@@ -101,21 +110,107 @@ public class GitMultiMergeDialog extends DialogWrapper {
         JPanel sourcePanel = new JPanel(new BorderLayout(0, 5));
         sourcePanel.add(new JBLabel(MessageBundle.message("source.branch.label")), BorderLayout.NORTH);
 
+        // Modelo original com todas as branches
+        DefaultComboBoxModel<String> originalModel = new DefaultComboBoxModel<>(allBranchNames.toArray(new String[0]));
+        sourceBranchComboBox = new ComboBox<>(originalModel);
+        sourceBranchComboBox.setSelectedItem(Objects.requireNonNull(repository.getCurrentBranch()).getName());
+
+        // Instala o SpeedSearch para o ComboBox
+        installSpeedSearch();
+
+        // Adiciona o listener de keyTyped para filtrar as branches
+        addKeyListener();
+
+        // Adiciona o listener de popup para restaurar o modelo original
+        addPopupListener();
+
+        // Listener para lidar com a seleção de uma branch
+        sourceBranchComboBox.addActionListener(e -> updateTargetTree());
+
+        // Montagem do painel
         JPanel comboPanel = new JPanel(new BorderLayout());
-        String currentBranch = repository.getCurrentBranchName();
-        sourceBranchComboBox = new ComboBox<>(allBranchNames.toArray(new String[0]));
-        sourceBranchComboBox.setSelectedItem(currentBranch);
         comboPanel.add(sourceBranchComboBox, BorderLayout.CENTER);
         sourcePanel.add(comboPanel, BorderLayout.CENTER);
 
+        // Adiciona o label de aviso
+        addWarningLabel(sourcePanel);
+        return sourcePanel;
+    }
+
+    /**
+     * Instala o SpeedSearch no ComboBox para permitir busca por branches.
+     */
+    private void installSpeedSearch() {
+        ComboboxSpeedSearch.installSpeedSearch(sourceBranchComboBox, s -> {
+            if (!sourceBranchComboBox.isPopupVisible()) {
+                sourceBranchComboBox.showPopup();
+            }
+            return s;
+        });
+    }
+
+    /**
+     * Adiciona um listener de keyTyped para filtrar as branches no ComboBox.
+     */
+    private void addKeyListener() {
+        sourceBranchComboBox.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+                SwingUtilities.invokeLater(() -> {
+                    SpeedSearchSupply supply = SpeedSearchSupply.getSupply(sourceBranchComboBox);
+                    String texto = supply != null ? supply.getEnteredPrefix() : null;
+                    DefaultComboBoxModel<String> model = (DefaultComboBoxModel<String>) sourceBranchComboBox.getModel();
+                    if (texto != null && !texto.isEmpty()) {
+                        model.removeAllElements();
+                        for (String branch : allBranchNames) {
+                            if (branch.contains(texto)) {
+                                model.addElement(branch);
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * Adiciona um listener de popup para restaurar o modelo original do ComboBox
+     * quando o popup é fechado.
+     */
+    private void addPopupListener() {
+        sourceBranchComboBox.addPopupMenuListener(new PopupMenuListener() {
+
+            @Override
+            public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
+                // Não faz nada
+            }
+
+            @Override
+            public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {
+                SwingUtilities.invokeLater(()-> {
+                    String branch = sourceBranchComboBox.getEditor().getItem().toString();
+                    DefaultComboBoxModel<String> model = (DefaultComboBoxModel<String>) sourceBranchComboBox.getModel();
+                    model.removeAllElements();
+                    model.addAll(allBranchNames);
+                    sourceBranchComboBox.setSelectedItem(branch);
+                });
+            }
+
+            @Override
+            public void popupMenuCanceled(PopupMenuEvent e) {
+                // Não faz nada
+            }
+        });
+    }
+
+    /**
+     * Adiciona um label de aviso para mostrar mensagens de erro.
+     */
+    private void addWarningLabel(JPanel sourcePanel) {
         warningLabel = new JBLabel();
         warningLabel.setForeground(JBColor.RED);
         warningLabel.setVisible(false);
         sourcePanel.add(warningLabel, BorderLayout.SOUTH);
-
-        sourceBranchComboBox.addActionListener(e -> updateTargetTree());
-
-        return sourcePanel;
     }
 
     /**
@@ -146,11 +241,25 @@ public class GitMultiMergeDialog extends DialogWrapper {
             }
         });
 
+        // Adiciona o listener de seleção para permitir múltiplas seleções
+        addTreeSelectionListener();
+
+        JBScrollPane targetScrollPane = new JBScrollPane(targetBranchTree);
+        targetPanel.add(targetScrollPane, BorderLayout.CENTER);
+        targetMainPanel.add(targetPanel, BorderLayout.CENTER);
+        return targetMainPanel;
+    }
+
+    /**
+     * Adiciona um listener de seleção na árvore de branches target.
+     * Permite seleção múltipla apenas em folhas e limita a 5 seleções.
+     */
+    private void addTreeSelectionListener() {
         targetBranchTree.addTreeSelectionListener(e -> {
             // Permitir seleção múltipla apenas em folhas e limitar a 5
             TreePath[] paths = targetBranchTree.getSelectionPaths();
             if (paths != null) {
-                List<TreePath> leafPaths = new java.util.ArrayList<>();
+                List<TreePath> leafPaths = new ArrayList<>();
                 for (TreePath path : paths) {
                     DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
                     if (node.isLeaf()) {
@@ -162,12 +271,10 @@ public class GitMultiMergeDialog extends DialogWrapper {
                 }
                 targetBranchTree.setSelectionPaths(leafPaths.toArray(new TreePath[0]));
             }
+            boolean hasSelectedLeaf = paths!= null && paths.length > 0;
+            boolean warningExists = warningLabel != null && warningLabel.isVisible();
+            setOKActionEnabled(hasSelectedLeaf && !warningExists);
         });
-
-        JBScrollPane targetScrollPane = new JBScrollPane(targetBranchTree);
-        targetPanel.add(targetScrollPane, BorderLayout.CENTER);
-        targetMainPanel.add(targetPanel, BorderLayout.CENTER);
-        return targetMainPanel;
     }
 
     /**
@@ -213,12 +320,6 @@ public class GitMultiMergeDialog extends DialogWrapper {
      * Esta abordagem evita bloquear a EDT.
      */
     private void checkSourceBranchUncommittedChangesAsync() {
-        String selectedBranch = (String) sourceBranchComboBox.getSelectedItem();
-        if (selectedBranch == null) {
-            setOKActionEnabled(false);
-            return;
-        }
-
         // Botão OK começa desabilitado e só é habilitado se não houver alterações
         setOKActionEnabled(false);
         warningLabel.setVisible(false);
@@ -242,7 +343,6 @@ public class GitMultiMergeDialog extends DialogWrapper {
                 setOKActionEnabled(false);
             } else {
                 warningLabel.setVisible(false);
-                setOKActionEnabled(true);
             }
         }, SwingUtilities::invokeLater);
     }
@@ -252,7 +352,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
      * texto de busca. Expande apenas os grupos relevantes.
      */
     private void updateTargetTree() {
-        String sourceBranch = (String) sourceBranchComboBox.getSelectedItem();
+        String sourceBranch = (String) sourceBranchComboBox.getEditor().getItem();
         String searchText = searchField.getText();
         targetTreeRoot.removeAllChildren();
         for (String branch : allBranchNames) {
@@ -313,9 +413,57 @@ public class GitMultiMergeDialog extends DialogWrapper {
             if (child == null) {
                 child = new DefaultMutableTreeNode(part);
                 node.add(child);
+                // Reordena os nós do pai para que as pastas apareçam antes das branches
+                reordenaNos(node);
             }
             node = child;
         }
+    }
+
+    /**
+     * Reordena os nós de um nó pai para que as pastas apareçam antes das branches.
+     */
+    private void reordenaNos(DefaultMutableTreeNode pai) {
+        int count = pai.getChildCount();
+        if (count <= 1) return; // Nada para reordenar
+
+        // Cria listas separadas para pastas e folhas
+        List<DefaultMutableTreeNode> pastas = new ArrayList<>();
+        List<DefaultMutableTreeNode> folhas = new ArrayList<>();
+
+        // Classifica os nós em pastas e folhas
+        for (int i = 0; i < count; i++) {
+            DefaultMutableTreeNode filho = (DefaultMutableTreeNode) pai.getChildAt(i);
+            if (temOuTeraFilhos(filho)) {
+                pastas.add(filho);
+            } else {
+                folhas.add(filho);
+            }
+        }
+
+        // Ordena pastas e folhas alfabeticamente
+        Comparator<DefaultMutableTreeNode> comparador = Comparator.comparing(n -> n.getUserObject().toString());
+        pastas.sort(comparador);
+        folhas.sort(comparador);
+
+        // Remove todos os filhos
+        pai.removeAllChildren();
+
+        // Adiciona primeiro as pastas, depois as folhas
+        for (DefaultMutableTreeNode pasta : pastas) {
+            pai.add(pasta);
+        }
+        for (DefaultMutableTreeNode folha : folhas) {
+            pai.add(folha);
+        }
+    }
+
+    /**
+     * Verifica se um nó tem ou terá filhos (é uma pasta).
+     * Um nó representa uma pasta se já tem filhos ou se faz parte de um caminho mais longo.
+     */
+    private boolean temOuTeraFilhos(DefaultMutableTreeNode no) {
+        return no.getChildCount() > 0;
     }
 
     /**
@@ -349,26 +497,17 @@ public class GitMultiMergeDialog extends DialogWrapper {
      */
     @Override
     protected void doOKAction() {
-        String sourceBranch = (String) sourceBranchComboBox.getSelectedItem();
-        List<String> targetBranches = getSelectedTargetBranches();
-        if (!validateSourceBranch(sourceBranch))
+        String sourceBranch = (String) sourceBranchComboBox.getEditor().getItem();
+        if (!allBranchNames.contains(sourceBranch)) {
+            Messages.showErrorDialog(project, MessageBundle.message("error.no.source"),
+                    MessageBundle.message("dialog.title"));
             return;
+        }
+        List<String> targetBranches = getSelectedTargetBranches();
         if (!validateTargetBranches(sourceBranch, targetBranches))
             return;
         startMergeProcess(sourceBranch, targetBranches);
         super.doOKAction();
-    }
-
-    /**
-     * Valida a branch source selecionada.
-     */
-    private boolean validateSourceBranch(String sourceBranch) {
-        if (sourceBranch == null) {
-            Messages.showErrorDialog(project, MessageBundle.message("error.no.source"),
-                    MessageBundle.message("dialog.title"));
-            return false;
-        }
-        return true;
     }
 
     /**

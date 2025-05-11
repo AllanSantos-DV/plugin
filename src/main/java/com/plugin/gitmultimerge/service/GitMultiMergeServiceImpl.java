@@ -187,8 +187,8 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
                     squash, pushAfterMerge, deleteSourceBranch, commitMessage, indicator);
             MergeStep[] steps = new MergeStep[] {
                     new CheckoutBranchStep(gitOps),
-                    new PullBranchStep(gitOps),
                     new PushBranchStep(gitOps, true),
+                    new PullBranchStep(gitOps),
                     new CheckUpToDateStep(gitOps),
                     new PerformMergeStep(gitOps),
                     new PushBranchStep(gitOps)

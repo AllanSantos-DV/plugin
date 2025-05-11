@@ -133,6 +133,17 @@ Essa separação facilita a manutenção, testes e futuras expansões.
 - **Internacionalização Robusta:**  
   Todas as mensagens e notificações do plugin são internacionalizadas, com arquivos `.properties` para inglês, português do Brasil e espanhol. Novas chaves são sempre adicionadas de forma consistente.
 
+### Atualizações Importantes
+
+- **Refatoração do Painel de Seleção da Branch Source:**
+  O painel foi completamente refeito, agora utilizando um ComboBox com busca dinâmica. O usuário pode digitar para filtrar branches em tempo real, tornando a seleção mais rápida e intuitiva, especialmente em repositórios grandes.
+
+- **Validação do Botão OK (Merge):**
+  O botão de merge permanece desabilitado até que todas as validações sejam aprovadas: não pode haver alterações não commitadas na branch source, pelo menos uma branch target válida deve ser selecionada e a branch source não pode ser escolhida como target. Isso previne erros e garante segurança na operação.
+
+- **Ajuste na Ordem dos Steps do Merge:**
+  O step de Push para o remote agora ocorre antes do Pull, garantindo que a branch remota exista antes de tentar atualizar. Isso corrige falhas em cenários onde a branch remota ainda não existe, tornando o fluxo mais robusto e confiável.
+
 > Consulte a seção [Fluxo de trabalho completo do plugin](#fluxo-de-trabalho-completo-do-plugin) para detalhes de cada etapa.
 
 ## Requisitos
@@ -188,15 +199,16 @@ O plugin apresenta um novo design vertical (450x550 pixels) que melhora signific
 ## Fluxo de trabalho completo do plugin
 
 1. **Checkout** para cada branch target
-2. **Pull** da branch target para garantir que está atualizada com o remote (novo step)
-3. **Merge** da branch source para a branch target
-4. **Commit** automático após squash (se a opção estiver habilitada)
-5. **Push** para o remote (se a opção estiver habilitada)
-6. **Fetch com prune** para atualizar as informações do repositório
-7. **Checkout** para uma branch segura
-8. **Deleção** da branch source local (se solicitado e todos os merges forem bem-sucedidos)
-9. **Deleção** da branch source remota (se existir, for solicitado e todos os merges forem bem-sucedidos)
-10. **Notificação** do resultado com detalhes de cada operação
+2. **Push** da branch target para o remote (se necessário, cria a branch remota e faz o rastreamento)
+3. **Pull** da branch target para garantir que está atualizada com o remote
+4. **Merge** da branch source para a branch target
+5. **Commit** automático após squash (se a opção estiver habilitada)
+6. **Push** para o remote (se a opção estiver habilitada)
+7. **Fetch com prune** para atualizar as informações do repositório
+8. **Checkout** para uma branch segura
+9. **Deleção** da branch source local (se solicitado e todos os merges forem bem-sucedidos)
+10. **Deleção** da branch source remota (se existir, for solicitado e todos os merges forem bem-sucedidos)
+11. **Notificação** do resultado com detalhes de cada operação
 
 ## Suporte a Múltiplos Idiomas
 
