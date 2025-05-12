@@ -12,6 +12,11 @@ import git4idea.commands.GitCommandResult;
 public class PullBranchStep implements MergeStep {
     private final GitRepositoryOperations service;
 
+    /**
+     * Construtor padrão.
+     *
+     * @param service Serviço de operações Git.
+     */
     public PullBranchStep(GitRepositoryOperations service) {
         this.service = service;
     }
@@ -28,7 +33,7 @@ public class PullBranchStep implements MergeStep {
                     NotificationHelper.DEFAULT_TITLE,
                     MessageBundle.message("error.pull", context.targetBranch,
                             String.join("\n", pullResult.getErrorOutput())));
-
+            // Não interrompe o fluxo, mas registra o erro
         }
         return true;
     }

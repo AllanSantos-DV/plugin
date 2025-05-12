@@ -15,6 +15,12 @@ public class DeleteSourceBranchStep implements MergeStep {
     private final GitRepositoryOperations service;
     private final String originalBranch;
 
+    /**
+     * Construtor padrão.
+     *
+     * @param service        Serviço de operações Git.
+     * @param originalBranch Nome da branch original.
+     */
     public DeleteSourceBranchStep(GitRepositoryOperations service, String originalBranch) {
         this.service = service;
         this.originalBranch = originalBranch;
@@ -45,6 +51,7 @@ public class DeleteSourceBranchStep implements MergeStep {
                 return true;
             }
         }
+        assert context.sourceBranch != null;
         GitRemoteBranch remoteBranch = service.findRemoteBranch(context.repository, context.sourceBranch);
         GitCommandResult deleteResult = service.deleteBranch(context.repository, context.sourceBranch);
         if (!deleteResult.success()) {

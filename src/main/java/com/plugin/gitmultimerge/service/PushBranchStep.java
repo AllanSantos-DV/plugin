@@ -12,7 +12,7 @@ import git4idea.commands.GitCommandResult;
  */
 public class PushBranchStep implements MergeStep {
     private final GitRepositoryOperations service;
-    private final boolean createRemoteIfMissing;
+    private final boolean markedAsDeleted;
 
     /**
      * Construtor padrão.
@@ -21,56 +21,41 @@ public class PushBranchStep implements MergeStep {
      */
     public PushBranchStep(GitRepositoryOperations service) {
         this.service = service;
-        this.createRemoteIfMissing = false;
+        this.markedAsDeleted = false;
     }
 
     /**
-     * Construtor com opção de criar a branch remota se não existir.
+     * Construtor com marcação de exclusão.
      *
-     * @param service               Serviço de operações Git.
-     * @param createRemoteIfMissing Se true, cria a branch remota se não existir.
+     * @param service         Serviço de operações Git.
+     * @param markedAsDeleted Indica se a branch foi marcada para exclusão.
      */
-    public PushBranchStep(GitRepositoryOperations service, boolean createRemoteIfMissing) {
+    public PushBranchStep(GitRepositoryOperations service, boolean markedAsDeleted) {
         this.service = service;
-        this.createRemoteIfMissing = createRemoteIfMissing;
+        this.markedAsDeleted = markedAsDeleted;
     }
 
     @Override
     public boolean execute(MergeContext context) {
-        if (!context.pushAfterMerge) {
+        if (!context.pushAfterMerge || markedAsDeleted) {
             return true;
         }
 
         // Verifica se a branch remota já existe
         GitRemoteBranch remoteBranch = service.findRemoteBranch(context.repository, context.targetBranch);
-        boolean needsSetupstream = remoteBranch == null;
+        boolean needsSetUpStream = remoteBranch == null;
 
-        GitCommandResult pushResult = null;
+        GitCommandResult pushResult = service.push(context.repository, context.targetBranch, needsSetUpStream);
 
-        // Executa push somente se:
-        // 1. A branch remota não existe e a opção de criar a branch remota está habilitada.
-        // 2. Opção de criar a branch remota não está habilitada.
-        if (!createRemoteIfMissing || needsSetupstream) {
-            pushResult = service.push(context.repository, context.targetBranch, needsSetupstream);
-        }
-
-        notifyPushError(context, pushResult);
-        return true;
-    }
-
-    /**
-     * Notifica o usuário sobre erros no push.
-     *
-     * @param context    Contexto do merge.
-     * @param pushResult Resultado do comando de push.
-     */
-    private void notifyPushError(MergeContext context, GitCommandResult pushResult) {
-        if (pushResult != null && !pushResult.success()) {
+        // Notifica o usuário sobre erros no push
+        if (!pushResult.success()) {
             NotificationHelper.notifyWarning(
                     context.project,
                     NotificationHelper.DEFAULT_TITLE,
                     MessageBundle.message("error.push", context.targetBranch,
                             String.join("\n", pushResult.getErrorOutput())));
+            // Não interrompe o fluxo, mas registra o erro
         }
+        return true;
     }
 }

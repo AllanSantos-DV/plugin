@@ -11,12 +11,18 @@ import com.plugin.gitmultimerge.util.NotificationHelper;
 public class CheckUpToDateStep implements MergeStep {
     private final GitRepositoryOperations service;
 
+    /**
+     * Construtor padrão.
+     *
+     * @param service Serviço de operações Git.
+     */
     public CheckUpToDateStep(GitRepositoryOperations service) {
         this.service = service;
     }
 
     @Override
     public boolean execute(MergeContext context) {
+        assert context.sourceBranch != null;
         boolean branchAlreadyUpToDate = !service.hasPendingChanges(context.repository, context.sourceBranch);
         if (branchAlreadyUpToDate) {
             NotificationHelper.notifyInfo(

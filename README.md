@@ -22,6 +22,8 @@ Plugin para IntelliJ IDEA que permite realizar o merge de uma branch source para
 - [Licença](#licença)
 - [Contato](#contato)
 - [Exemplo de uso](#exemplo-de-uso)
+- [Fluxo Interno e Steps do Merge](#fluxo-interno-e-steps-do-merge)
+- [Para Desenvolvedores](#para-desenvolvedores)
 
 ## Estrutura de Pacotes
 
@@ -254,17 +256,14 @@ src/main/resources/messages/GitMultiMergeBundle_XX.properties
 ```
 onde `XX` é o código do idioma (como fr, de, it, etc.).
 
-## Controle de Versão Centralizado
-
-A versão oficial do plugin é definida no arquivo `VERSION` na raiz do projeto. Sempre que for realizar um novo release, atualize este arquivo para garantir consistência entre build, plugin.xml e documentação.
-
 ## Versões
 
-- **1.3.0**: Refatoração do fluxo de merge para responsabilidade única, feedback internacionalizado, placeholder multilíngue na busca de branches, reorganização de pacotes, adição do arquivo de licença MIT e documentação aprimorada.
-- **1.2.1**: Validação assíncrona de alterações não commitadas, processamento em background e melhorias de performance
-- **1.2.0**: Suporte completo a internacionalização, interface redesenhada com layout vertical e compatibilidade com Java 17
-- **1.1.0**: Melhorias na interface e correções de bugs
-- **1.0.0**: Versão inicial com funcionalidades básicas
+- **1.4.1**: Painel de seleção da branch source totalmente refeito (ComboBox com busca dinâmica), botão OK (merge) com validação aprimorada, ordem dos steps do merge ajustada (push antes do pull), correção de falhas ao fazer pull em branches remotas recém-criadas.
+- **1.3.1**: Novo step PullBranchStep (garante atualização da target antes do merge), refatoração do fluxo de merge para responsabilidade única, internacionalização aprimorada, placeholder multilíngue na busca de branches, reorganização de pacotes, push inteligente, robustez no tratamento de erros, documentação e exemplos expandidos, licença MIT adicionada.
+- **1.2.1**: Validação assíncrona de alterações não commitadas, processamento em background e melhorias de performance.
+- **1.2.0**: Suporte completo a internacionalização, interface redesenhada com layout vertical e compatibilidade com Java 17.
+- **1.1.0**: Melhorias na interface e correções de bugs.
+- **1.0.0**: Versão inicial com funcionalidades básicas.
 
 ## Licença
 
@@ -327,4 +326,79 @@ Para facilitar a seleção de branches target, o campo de busca agora exibe um t
 - Consistência: o comportamento do plugin é idêntico ao da interface de commit do IntelliJ.
 - Experiência fluida: a verificação é instantânea e o campo de busca é autoexplicativo, sem necessidade de refresh manual ou comandos externos.
 - Internacionalização: todas as mensagens e placeholders são exibidos no idioma da interface do usuário.
+
+## Fluxo Interno e Steps do Merge
+
+O fluxo de merge do plugin foi totalmente modularizado, seguindo o princípio de responsabilidade única. Cada etapa do processo é representada por uma classe específica, facilitando manutenção, testes e futuras expansões.
+
+### Orquestração do Fluxo
+O serviço principal (`GitMultiMergeServiceImpl`) orquestra o processo de merge, delegando cada etapa a uma classe responsável. O contexto compartilhado (`MergeContext`) armazena parâmetros, progresso e resultados, sendo passado entre os steps.
+
+### Principais Steps (Classes) do Fluxo
+
+- **CheckoutBranchStep**  
+  Responsável por realizar o checkout da branch target antes do merge.
+
+- **SyncBranchStep** (Novo)  
+  Garante que a branch target esteja sincronizada com o remote antes do merge.  
+  - Se a branch remota não existir, faz o push com upstream.  
+  - Se já existir, executa um pull para garantir que a branch local está atualizada.
+
+- **CheckUpToDateStep**  
+  Verifica se a branch target já está atualizada em relação à source, evitando merges desnecessários.
+
+- **PerformMergeStep**  
+  Executa o merge da branch source para a target, respeitando as opções de squash e commit message.
+
+- **PushBranchStep**  
+  Realiza o push da branch target para o remote após o merge, se a opção estiver habilitada.
+
+- **ReturnToOriginalBranchStep**  
+  Retorna para a branch original do usuário ao final do processo, se necessário.
+
+- **DeleteSourceBranchStep**  
+  Deleta a branch source local e remota após merges bem-sucedidos, garantindo que o usuário não está na branch a ser deletada.
+
+### Envio do Source para o Remote
+Antes de iniciar o merge para as targets, o plugin garante que a branch source está presente no remote (caso a opção de push esteja habilitada e a deleção da source não esteja marcada). Isso evita falhas em merges remotos e mantém o repositório sincronizado.
+
+### Princípios de Design
+- **Responsabilidade Única:**  
+  Cada classe/step executa apenas uma função do fluxo, facilitando manutenção e testes.
+- **Chain of Responsibility:**  
+  O fluxo é composto por uma cadeia de steps, cada um podendo interromper ou continuar o processo conforme o resultado.
+- **Context Object:**  
+  O `MergeContext` centraliza o estado e os parâmetros do fluxo, evitando acoplamento entre as etapas.
+
+### Tabela Resumida dos Steps
+
+| Step/Class                  | Responsabilidade Principal                                      |
+|-----------------------------|---------------------------------------------------------------|
+| CheckoutBranchStep          | Checkout da branch target                                     |
+| SyncBranchStep (Novo)       | Sincronização da branch target com o remote                   |
+| CheckUpToDateStep           | Verificação se a target já está atualizada                    |
+| PerformMergeStep            | Execução do merge                                             |
+| PushBranchStep              | Push da target para o remote                                  |
+| ReturnToOriginalBranchStep  | Retorno para a branch original                                |
+| DeleteSourceBranchStep      | Deleção da branch source local/remota                         |
+
+---
+
+## Para Desenvolvedores
+
+O fluxo de merge do plugin foi desenhado para ser facilmente extensível. Para adicionar uma nova etapa ao processo, basta criar uma nova classe implementando a interface `MergeStep` e adicioná-la à cadeia de steps no serviço principal. O uso do padrão Chain of Responsibility e do contexto compartilhado (`MergeContext`) garante baixo acoplamento e alta coesão entre as etapas.
+
+### Exemplo de Extensão do Fluxo
+
+```java
+// Exemplo de adição de um novo step customizado ao fluxo:
+MergeStep[] steps = new MergeStep[] {
+    new CheckoutBranchStep(gitOps),
+    new SyncBranchStep(gitOps),
+    new CheckUpToDateStep(gitOps),
+    new PerformMergeStep(gitOps),
+    new PushBranchStep(gitOps),
+    new MeuNovoStepCustomizado(gitOps) // Exemplo de extensão
+};
+```
 

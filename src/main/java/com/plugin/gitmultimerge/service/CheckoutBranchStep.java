@@ -12,6 +12,11 @@ import git4idea.commands.GitCommandResult;
 public class CheckoutBranchStep implements MergeStep {
     private final GitRepositoryOperations service;
 
+    /**
+     * Construtor padrão.
+     *
+     * @param service Serviço de operações Git.
+     */
     public CheckoutBranchStep(GitRepositoryOperations service) {
         this.service = service;
     }

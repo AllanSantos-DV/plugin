@@ -12,12 +12,18 @@ import git4idea.commands.GitCommandResult;
 public class PerformMergeStep implements MergeStep {
     private final GitRepositoryOperations service;
 
+    /**
+     * Construtor padrão.
+     *
+     * @param service Serviço de operações Git.
+     */
     public PerformMergeStep(GitRepositoryOperations service) {
         this.service = service;
     }
 
     @Override
     public boolean execute(MergeContext context) {
+        assert context.sourceBranch != null;
         GitCommandResult mergeResult = service.merge(
                 context.repository,
                 context.sourceBranch,

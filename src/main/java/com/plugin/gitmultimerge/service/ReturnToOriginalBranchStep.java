@@ -13,6 +13,12 @@ public class ReturnToOriginalBranchStep implements MergeStep {
     private final GitRepositoryOperations service;
     private final String originalBranch;
 
+    /**
+     * Construtor padrão.
+     *
+     * @param service        Serviço de operações Git.
+     * @param originalBranch Nome da branch original.
+     */
     public ReturnToOriginalBranchStep(GitRepositoryOperations service, String originalBranch) {
         this.service = service;
         this.originalBranch = originalBranch;

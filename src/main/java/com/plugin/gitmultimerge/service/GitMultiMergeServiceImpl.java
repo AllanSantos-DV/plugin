@@ -127,6 +127,10 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
                 return;
             }
 
+            // Envia a branch source para o remote, se pushAfterMerge for true e deleteSourceBranch for false
+            new PushBranchStep(gitOps, deleteSourceBranch).execute(
+                    new MergeContext(project, repository, sourceBranch, pushAfterMerge));
+
             MergeResult result = processTargetBranches(
                     repository, sourceBranch, targetBranches, squash, pushAfterMerge, deleteSourceBranch, commitMessage,
                     indicator);
@@ -134,8 +138,6 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
             boolean shouldDelete = deleteSourceBranch && result.allSuccessful;
             boolean shouldReturnToOriginal = !shouldDelete || !originalBranch.equals(sourceBranch);
 
-            indicator.setText(MessageBundle.message("progress.returning"));
-            indicator.setFraction(1.0);
 
             if (shouldReturnToOriginal) {
                 handleReturnToOriginalBranch(repository, sourceBranch, originalBranch, squash, pushAfterMerge,
@@ -187,8 +189,7 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
                     squash, pushAfterMerge, deleteSourceBranch, commitMessage, indicator);
             MergeStep[] steps = new MergeStep[] {
                     new CheckoutBranchStep(gitOps),
-                    new PushBranchStep(gitOps, true),
-                    new PullBranchStep(gitOps),
+                    new SyncBranchStep(gitOps),
                     new CheckUpToDateStep(gitOps),
                     new PerformMergeStep(gitOps),
                     new PushBranchStep(gitOps)
@@ -217,6 +218,8 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
             boolean deleteSourceBranch,
             String commitMessage,
             ProgressIndicator indicator) {
+        indicator.setText(MessageBundle.message("progress.returning"));
+        indicator.setFraction(1.0);
         new ReturnToOriginalBranchStep(gitOps, originalBranch).execute(
                 new MergeContext(project, repository, sourceBranch, originalBranch, squash, pushAfterMerge,
                         deleteSourceBranch, commitMessage, indicator));
@@ -232,6 +235,8 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
             boolean pushAfterMerge,
             String commitMessage,
             ProgressIndicator indicator) {
+        indicator.setText(MessageBundle.message("progress.deleting"));
+        indicator.setFraction(1.0);
         return new DeleteSourceBranchStep(gitOps, originalBranch).execute(
                 new MergeContext(project, repository, sourceBranch, targetBranch, squash, pushAfterMerge,
                         true, commitMessage, indicator));

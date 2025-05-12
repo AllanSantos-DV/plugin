@@ -6,21 +6,28 @@
 
     <description><![CDATA[
     <h2>Git Multi Merge</h2>
-    <p>Plugin para realizar o merge de uma branch source para múltiplas branches target simultaneamente, com opções de push automático e limpeza de branches.</p>
-    
+    <p>
+    Plugin para realizar o merge de uma branch source para múltiplas branches target simultaneamente, com opções avançadas de automação, segurança e limpeza de branches. Estruturado de forma modular, seguindo o princípio de responsabilidade única para cada etapa do fluxo.
+    </p>
+
     <h3>Principais Funcionalidades:</h3>
     <ul>
-        <li><b>Multi-merge:</b> Selecione uma branch source e até 5 branches target para merge</li>
-        <li><b>Push Automático:</b> Atualize automaticamente os repositórios remotos após cada merge bem-sucedido</li>
-        <li><b>Squash:</b> Opção para combinar todos os commits em um único durante o merge</li>
-        <li><b>Limpeza Automática:</b> Possibilidade de deletar branches source (local e remota) após merges bem-sucedidos</li>
-        <li><b>Atualização Inteligente:</b> Fetch automático com prune para manter seu repositório atualizado</li>
-        <li><b>Feedback Detalhado:</b> Visualização em tempo real do progresso e notificações completas</li>
-        <li><b>Multilíngue:</b> Suporte completo para Inglês, Português do Brasil e Espanhol</li>
-        <li><b>Interface Otimizada:</b> Layout vertical com foco na seleção de branches target</li>
+        <li><b>Multi-merge:</b> Selecione uma branch source e até 5 branches target para merge em lote, com apenas alguns cliques.</li>
+        <li><b>Validação de Segurança:</b> O merge é bloqueado caso existam alterações não commitadas, prevenindo conflitos e perdas de trabalho.</li>
+        <li><b>Sincronização Inteligente:</b> Garante que as branches target estejam sempre atualizadas com o remote antes do merge, evitando conflitos e falhas.</li>
+        <li><b>Push Automático:</b> Atualize automaticamente os repositórios remotos após cada merge bem-sucedido, incluindo o envio da branch source se necessário.</li>
+        <li><b>Squash:</b> Opção para combinar todos os commits em um único durante o merge.</li>
+        <li><b>Limpeza Automática:</b> Possibilidade de deletar branches source (local e remota) após merges bem-sucedidos.</li>
+        <li><b>Atualização Inteligente:</b> Fetch automático com prune para manter seu repositório sempre sincronizado.</li>
+        <li><b>Feedback Detalhado:</b> Visualização em tempo real do progresso, notificações completas e resumo das operações ao final do processo.</li>
+        <li><b>Interface Otimizada:</b> Layout vertical, seleção rápida de branches, busca dinâmica e validação visual em tempo real.</li>
+        <li><b>Multilíngue:</b> Suporte completo para Inglês, Português do Brasil e Espanhol.</li>
+        <li><b>Extensibilidade:</b> Arquitetura modular baseada em steps, facilitando manutenção e futuras expansões.</li>
     </ul>
-    
-    <p>Economize tempo e evite erros em operações repetitivas de merge. Perfeito para equipes que trabalham com múltiplas branches de feature e releases.</p>
+
+    <p>
+    Economize tempo, evite erros manuais e garanta a integridade do seu repositório em operações de merge repetitivas. Perfeito para equipes que trabalham com múltiplas branches de feature, release ou manutenção.
+    </p>
     ]]></description>
     
     <change-notes><![CDATA[
@@ -34,20 +41,18 @@
 
     <h3>Versão 1.3.1</h3>
     <ul>
-        <li><b>NOVO:</b> Etapa PullBranchStep: realiza <code>git pull</code> na branch target antes do merge, garantindo que está atualizada com o remote</li>
-        <li><b>MELHORADO:</b> Fluxo de push aprimorado: push inteligente e criação automática de branch remota se necessário</li>
-        <li><b>MELHORADO:</b> Robustez do fluxo de merge, com tratamento de erros e notificações detalhadas</li>
-        <li><b>MELHORADO:</b> Documentação atualizada com exemplos e explicação do novo fluxo</li>
+        <li><b>NOVO:</b> Etapa PullBranchStep: realiza <code>git pull</code> na branch target antes do merge, garantindo que está atualizada com o remote.</li>
+        <li><b>MELHORADO:</b> Refatoração do fluxo de merge para responsabilidade única e código mais limpo.</li>
+        <li><b>MELHORADO:</b> Mensagens e feedback internacionalizados para todos os cenários de merge e deleção.</li>
+        <li><b>MELHORADO:</b> Placeholder internacionalizado no campo de busca de branches.</li>
+        <li><b>MELHORADO:</b> Estrutura de pacotes reorganizada para melhor manutenção.</li>
+        <li><b>MELHORADO:</b> Fluxo de push aprimorado: push inteligente e criação automática de branch remota se necessário.</li>
+        <li><b>MELHORADO:</b> Robustez do fluxo de merge, com tratamento de erros e notificações detalhadas.</li>
+        <li><b>MELHORADO:</b> Documentação atualizada com exemplos e explicação do novo fluxo.</li>
+        <li><b>ADICIONADO:</b> Arquivo de licença MIT e referência no README.</li>
+        <li><b>ADICIONADO:</b> Documentação detalhada e exemplos de uso no README.</li>
     </ul>
-    <h3>Versão 1.3.0</h3>
-    <ul>
-        <li><b>MELHORADO:</b> Refatoração do fluxo de merge para responsabilidade única e código mais limpo</li>
-        <li><b>MELHORADO:</b> Mensagens e feedback internacionalizados para todos os cenários de merge e deleção</li>
-        <li><b>MELHORADO:</b> Placeholder internacionalizado no campo de busca de branches</li>
-        <li><b>MELHORADO:</b> Estrutura de pacotes reorganizada para melhor manutenção</li>
-        <li><b>ADICIONADO:</b> Arquivo de licença MIT e referência no README</li>
-        <li><b>ADICIONADO:</b> Documentação detalhada e exemplos de uso no README</li>
-    </ul>
+
     <h3>Versão 1.2.1</h3>
     <ul>
         <li><b>MELHORADO:</b> Validação assíncrona de alterações não commitadas</li>
