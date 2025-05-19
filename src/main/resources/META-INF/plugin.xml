@@ -13,16 +13,16 @@
     <h3>Principais Funcionalidades:</h3>
     <ul>
         <li><b>Multi-merge:</b> Selecione uma branch source e até 5 branches target para merge em lote, com apenas alguns cliques.</li>
-        <li><b>Validação de Segurança:</b> O merge é bloqueado caso existam alterações não commitadas, prevenindo conflitos e perdas de trabalho.</li>
-        <li><b>Sincronização Inteligente:</b> Garante que as branches target estejam sempre atualizadas com o remote antes do merge, evitando conflitos e falhas.</li>
+        <li><b>Validação de Segurança:</b> O merge é bloqueado caso existam alterações não enviadas, prevenindo conflitos e perdas de trabalho.</li>
+        <li><b>Sincronização Inteligente:</b> Garante que as branches target estejam sempre atualizadas com o remote antes do merge, evitando conflito e falhas.</li>
         <li><b>Push Automático:</b> Atualize automaticamente os repositórios remotos após cada merge bem-sucedido, incluindo o envio da branch source se necessário.</li>
-        <li><b>Squash:</b> Opção para combinar todos os commits em um único durante o merge.</li>
-        <li><b>Limpeza Automática:</b> Possibilidade de deletar branches source (local e remota) após merges bem-sucedidos.</li>
-        <li><b>Atualização Inteligente:</b> Fetch automático com prune para manter seu repositório sempre sincronizado.</li>
-        <li><b>Feedback Detalhado:</b> Visualização em tempo real do progresso, notificações completas e resumo das operações ao final do processo.</li>
-        <li><b>Interface Otimizada:</b> Layout vertical, seleção rápida de branches, busca dinâmica e validação visual em tempo real.</li>
+        <li><b>Squash:</b> Opção para combinar todos os commits num único durante o merge.</li>
+        <li><b>Limpeza Automática:</b> Possibilidade de remover branches source (local e remota) após merges bem-sucedidos.</li>
+        <li><b>Atualização Inteligente:</b> Fetch automático com prune para manter o seu repositório sempre sincronizado.</li>
+        <li><b>‘Feedback’ Detalhado:</b> Visualização em tempo real do progresso, notificações completas e resumo das operações ao final do processo.</li>
+        <li><b>‘Interface’ Otimizada:</b> Layout vertical, seleção rápida de branches, busca dinâmica e validação visual em tempo real.</li>
         <li><b>Multilíngue:</b> Suporte completo para Inglês, Português do Brasil e Espanhol.</li>
-        <li><b>Extensibilidade:</b> Arquitetura modular baseada em steps, facilitando manutenção e futuras expansões.</li>
+        <li><b>Extensibilidade:</b> Arquitetura modular baseada em ‘steps’, facilitando manutenção e futuras expansões.</li>
     </ul>
 
     <p>
@@ -43,7 +43,7 @@
     <ul>
         <li><b>NOVO:</b> Etapa PullBranchStep: realiza <code>git pull</code> na branch target antes do merge, garantindo que está atualizada com o remote.</li>
         <li><b>MELHORADO:</b> Refatoração do fluxo de merge para responsabilidade única e código mais limpo.</li>
-        <li><b>MELHORADO:</b> Mensagens e feedback internacionalizados para todos os cenários de merge e deleção.</li>
+        <li><b>MELHORADO:</b> Mensagens e ‘feedback’ internacionalizados para todos os cenários de merge e remoção de branches.</li>
         <li><b>MELHORADO:</b> Placeholder internacionalizado no campo de busca de branches.</li>
         <li><b>MELHORADO:</b> Estrutura de pacotes reorganizada para melhor manutenção.</li>
         <li><b>MELHORADO:</b> Fluxo de push aprimorado: push inteligente e criação automática de branch remota se necessário.</li>
@@ -55,8 +55,8 @@
 
     <h3>Versão 1.2.1</h3>
     <ul>
-        <li><b>MELHORADO:</b> Validação assíncrona de alterações não commitadas</li>
-        <li><b>MELHORADO:</b> Processamento em background para melhor performance</li>
+        <li><b>MELHORADO:</b> Validação assíncrona de alterações não enviadas</li>
+        <li><b>MELHORADO:</b> Processamento em background para melhor desempenho</li>
         <li><b>MELHORADO:</b> Tratamento de erros mais robusto</li>
         <li><b>MELHORADO:</b> Atualizações de UI thread-safe</li>
     </ul>
@@ -66,7 +66,7 @@
         <li><b>NOVO:</b> Internacionalização completa do plugin</li>
         <li><b>NOVO:</b> Suporte para múltiplos idiomas (Inglês, Português do Brasil, Espanhol)</li>
         <li><b>NOVO:</b> Detecção automática do idioma do usuário</li>
-        <li><b>NOVO:</b> Interface com layout vertical para melhor usabilidade</li>
+        <li><b>NOVO:</b> ‘Interface’ com layout vertical para melhor usabilidade</li>
         <li><b>MELHORADO:</b> Aumento do espaço para visualização das branches target</li>
         <li><b>MELHORADO:</b> Organização mais compacta das opções e controles</li>
         <li><b>MELHORADO:</b> Dimensões otimizadas da janela de diálogo (450x550)</li>
@@ -77,7 +77,7 @@
     
     <h3>Versão 1.1.0</h3>
     <ul>
-        <li><b>NOVO:</b> Interface aprimorada com ComboBox para seleção de branch source</li>
+        <li><b>NOVO:</b> ‘Interface’ aprimorada com ComboBox para seleção de branch source</li>
         <li><b>NOVO:</b> Campo de busca para filtrar branches target em repositórios grandes</li>
         <li><b>NOVO:</b> Seleção automática da branch atual como source padrão</li>
         <li><b>CORRIGIDO:</b> Problema de commit automático após operação de squash</li>
@@ -88,9 +88,9 @@
     <h3>Versão 1.0.0</h3>
     <ul>
         <li><b>NOVO:</b> Push automático para remotes após merge bem-sucedido</li>
-        <li><b>NOVO:</b> Deleção de branch remota junto com a local</li>
+        <li><b>NOVO:</b> Deleção de branch remota com a local</li>
         <li><b>NOVO:</b> Atualização automática com fetch e prune</li>
-        <li><b>MELHORADO:</b> Interface de usuário mais intuitiva</li>
+        <li><b>MELHORADO:</b> ‘Interface’ de usuário mais intuitiva</li>
         <li><b>MELHORADO:</b> Notificações com detalhes completos das operações</li>
         <li><b>CORRIGIDO:</b> Compatibilidade com versões mais recentes do IntelliJ IDEA</li>
     </ul>

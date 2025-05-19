@@ -7,7 +7,7 @@ import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Utilitário de notificações simplificado para exibir mensagens ao usuário.
+ * Utilitário de notificações simplificado para exibir mensagens ao utilizador.
  */
 public class NotificationHelper {
 

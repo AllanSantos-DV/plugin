@@ -26,6 +26,8 @@ public class MergeContext {
     public final List<String> failedMerges = new ArrayList<>();
 
     public boolean allSuccessful = true;
+    public String errorMessage;
+    public String atualBranch;
 
     /**
      * Construtor padrão.
@@ -36,7 +38,7 @@ public class MergeContext {
      * @param targetBranch       branch alvo
      * @param squash             se true, faz squash dos commits
      * @param pushAfterMerge     se true, faz push após o merge
-     * @param deleteSourceBranch se true, deleta a branch source após o merge
+     * @param deleteSourceBranch se true, delete a branch source após o merge
      * @param commitMessage      mensagem de commit para squash
      * @param indicator          indicador de progresso
      */
@@ -52,24 +54,5 @@ public class MergeContext {
         this.deleteSourceBranch = deleteSourceBranch;
         this.commitMessage = commitMessage;
         this.indicator = indicator;
-    }
-
-    /**
-     * Construtor para o caso de push.
-     * @param project projeto
-     * @param repository repositório
-     * @param targetBranch branch alvo
-     * @param creatRemote criar remoto
-     */
-    public MergeContext(Project project, GitRepository repository, String targetBranch, boolean creatRemote) {
-        this.project = project;
-        this.repository = repository;
-        this.targetBranch = targetBranch;
-        this.pushAfterMerge = creatRemote;
-        this.sourceBranch = null;
-        this.squash = false;
-        this.deleteSourceBranch = false;
-        this.commitMessage = null;
-        this.indicator = null;
     }
 }

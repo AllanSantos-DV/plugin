@@ -4,6 +4,7 @@ import com.intellij.ui.DocumentAdapter;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBTextField;
 import com.intellij.ui.treeStructure.Tree;
+import com.plugin.gitmultimerge.util.MessageBundle;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
@@ -16,7 +17,7 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Painel customizado para exibir e gerenciar a árvore de branches target com
+ * Painel customizado para exibir e gerir a árvore de branches target com
  * campo de busca.
  */
 public class BranchTreePanel extends JPanel {
@@ -39,7 +40,7 @@ public class BranchTreePanel extends JPanel {
 
         JPanel searchPanel = new JPanel(new BorderLayout());
         searchField = new JBTextField();
-        searchField.getEmptyText().setText("Search branch...");
+        searchField.getEmptyText().setText(MessageBundle.message("search.branch.placeholder"));
         searchPanel.add(searchField, BorderLayout.CENTER);
         add(searchPanel, BorderLayout.NORTH);
         add(new JBScrollPane(branchTree), BorderLayout.CENTER);

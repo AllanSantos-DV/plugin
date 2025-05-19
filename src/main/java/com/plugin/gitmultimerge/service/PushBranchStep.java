@@ -3,7 +3,7 @@ package com.plugin.gitmultimerge.service;
 import com.plugin.gitmultimerge.service.interfaces.GitRepositoryOperations;
 import com.plugin.gitmultimerge.service.interfaces.MergeStep;
 import com.plugin.gitmultimerge.util.MessageBundle;
-import com.plugin.gitmultimerge.util.NotificationHelper;
+import com.sun.istack.Nullable;
 import git4idea.GitRemoteBranch;
 import git4idea.commands.GitCommandResult;
 
@@ -13,49 +13,68 @@ import git4idea.commands.GitCommandResult;
 public class PushBranchStep implements MergeStep {
     private final GitRepositoryOperations service;
     private final boolean markedAsDeleted;
+    private String branchName;
+    @Nullable
+    private Boolean remoteNotExists;
+
+    /**
+     * Construtor com nome da branch e verificação de remote.
+     * @param service Serviço de operações Git.
+     * @param remoteNotExists ‘Flag’ a indicar se a branch remota não exista.
+     */
+    public PushBranchStep(GitRepositoryOperations service, boolean remoteNotExists) {
+        this(service, null, false);
+        this.remoteNotExists = remoteNotExists;
+    }
 
     /**
      * Construtor padrão.
      *
      * @param service Serviço de operações Git.
+     * @param branchName Nome da branch.
+     * @param markedAsDeleted ‘Flag’ a indicar se a branch foi marcada para exclusão.
      */
-    public PushBranchStep(GitRepositoryOperations service) {
+    public PushBranchStep(GitRepositoryOperations service, String branchName, boolean markedAsDeleted) {
         this.service = service;
-        this.markedAsDeleted = false;
-    }
-
-    /**
-     * Construtor com marcação de exclusão.
-     *
-     * @param service         Serviço de operações Git.
-     * @param markedAsDeleted Indica se a branch foi marcada para exclusão.
-     */
-    public PushBranchStep(GitRepositoryOperations service, boolean markedAsDeleted) {
-        this.service = service;
+        this.branchName = branchName;
         this.markedAsDeleted = markedAsDeleted;
+        this.remoteNotExists = null;
     }
 
     @Override
-    public boolean execute(MergeContext context) {
+    public StepResult execute(MergeContext context) {
         if (!context.pushAfterMerge || markedAsDeleted) {
-            return true;
+            return StepResult.SUCCESS;
         }
 
-        // Verifica se a branch remota já existe
-        GitRemoteBranch remoteBranch = service.findRemoteBranch(context.repository, context.targetBranch);
-        boolean needsSetUpStream = remoteBranch == null;
-
-        GitCommandResult pushResult = service.push(context.repository, context.targetBranch, needsSetUpStream);
-
-        // Notifica o usuário sobre erros no push
-        if (!pushResult.success()) {
-            NotificationHelper.notifyWarning(
-                    context.project,
-                    NotificationHelper.DEFAULT_TITLE,
-                    MessageBundle.message("error.push", context.targetBranch,
-                            String.join("\n", pushResult.getErrorOutput())));
-            // Não interrompe o fluxo, mas registra o erro
+        if (branchName == null) {
+            branchName = context.targetBranch;
         }
-        return true;
+
+        if (remoteNotExists == null) {
+            GitRemoteBranch remoteBranch = service.findRemoteBranch(context.repository, branchName);
+            remoteNotExists = remoteBranch == null;
+        }
+        GitCommandResult pushResult = service.push(context.repository, branchName, remoteNotExists);
+        if (pushResult.success()) {
+            return StepResult.SUCCESS;
+        }
+
+        context.errorMessage = MessageBundle.message("error.push", branchName,
+                String.join("\n", pushResult.getErrorOutput()));
+
+        return new ResultFailStep(pushResult, context.errorMessage).checkConflict(context);
+    }
+
+    @Override
+    public StepResult failure(MergeContext context) {
+        context.allSuccessful = false;
+        context.failedMerges.add(context.targetBranch);
+        return StepResult.SKIPPED;
+    }
+
+    @Override
+    public void success(MergeContext context) {
+        // Não há ações específicas a serem realizadas em caso de sucesso nesta etapa.
     }
 }

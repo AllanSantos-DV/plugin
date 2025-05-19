@@ -3,6 +3,7 @@ package com.plugin.gitmultimerge.service;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.project.Project;
+import com.plugin.gitmultimerge.exception.MultiMergeOperationException;
 import com.plugin.gitmultimerge.service.interfaces.GitMultiMergeService;
 import com.plugin.gitmultimerge.service.interfaces.GitRepositoryOperations;
 import com.plugin.gitmultimerge.service.interfaces.MergeStep;
@@ -61,11 +62,11 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
      * @param targetBranches     Lista de branches target.
      * @param squash             Se true, faz squash dos commits.
      * @param pushAfterMerge     Se true, faz push após cada merge.
-     * @param deleteSourceBranch Se true, deleta a branch source após merges
+     * @param deleteSourceBranch Se true, delete a branch source após merges
      *                           bem-sucedidos.
      * @param commitMessage      Mensagem de commit para squash.
      * @param indicator          Indicador de progresso.
-     * @return CompletableFuture indicando sucesso ou falha da operação.
+     * @return CompletableFuture indica sucesso ou falha da operação.
      */
     @Override
     public CompletableFuture<Boolean> performMerge(
@@ -104,7 +105,7 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
 
     /**
      * Executa a operação de multi-merge, delegando cada etapa para métodos
-     * auxiliares.
+     * auxiliar.
      */
     private void executeMultiMergeOperation(
             GitRepository repository,
@@ -127,17 +128,19 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
                 return;
             }
 
-            // Envia a branch source para o remote, se pushAfterMerge for true e deleteSourceBranch for false
-            new PushBranchStep(gitOps, deleteSourceBranch).execute(
-                    new MergeContext(project, repository, sourceBranch, pushAfterMerge));
+            // Envia a branch source para o remote, se pushAfterMerge for true e
+            // deleteSourceBranch for false.
+            new PushSourceBranchStep(gitOps).execute(
+                    new MergeContext(project, repository, sourceBranch, sourceBranch, squash, pushAfterMerge,
+                            deleteSourceBranch, commitMessage, indicator));
 
             MergeResult result = processTargetBranches(
-                    repository, sourceBranch, targetBranches, squash, pushAfterMerge, deleteSourceBranch, commitMessage,
+                    repository, sourceBranch, originalBranch, targetBranches, squash, pushAfterMerge,
+                    deleteSourceBranch, commitMessage,
                     indicator);
 
             boolean shouldDelete = deleteSourceBranch && result.allSuccessful;
             boolean shouldReturnToOriginal = !shouldDelete || !originalBranch.equals(sourceBranch);
-
 
             if (shouldReturnToOriginal) {
                 handleReturnToOriginalBranch(repository, sourceBranch, originalBranch, squash, pushAfterMerge,
@@ -148,14 +151,15 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
                 deleteSourceBranch = handleDeleteSourceBranch(repository, sourceBranch, originalBranch,
                         targetBranches.get(0), squash,
                         pushAfterMerge, commitMessage, indicator);
-            } else if (deleteSourceBranch) {
-                NotificationHelper.notifyWarning(
-                        project,
-                        NotificationHelper.DEFAULT_TITLE,
-                        MessageBundle.message("summary.delete.skipped"));
+                if (!deleteSourceBranch) {
+                    NotificationHelper.notifyWarning(
+                            project,
+                            NotificationHelper.DEFAULT_TITLE,
+                            MessageBundle.message("summary.delete.skipped"));
+                }
             }
 
-            handleFetchIfNeeded(repository, pushAfterMerge, deleteSourceBranch);
+            handleFetchIfNeeded(repository, pushAfterMerge && result.allSuccessful, deleteSourceBranch);
             notifySummary(result.allSuccessfulMerges, result.allFailedMerges, result.allSuccessful);
             future.complete(result.allSuccessful);
         } catch (Exception e) {
@@ -164,7 +168,7 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
         }
     }
 
-    /** Estrutura para acumular resultados do processamento das targets. */
+    /** Estrutura para acumular resultados do processamento dos targets. */
     private static class MergeResult {
         final List<String> allSuccessfulMerges = new ArrayList<>();
         final List<String> allFailedMerges = new ArrayList<>();
@@ -175,12 +179,13 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
     private MergeResult processTargetBranches(
             GitRepository repository,
             String sourceBranch,
+            String originalBranch,
             List<String> targetBranches,
             boolean squash,
             boolean pushAfterMerge,
             boolean deleteSourceBranch,
             String commitMessage,
-            ProgressIndicator indicator) {
+            ProgressIndicator indicator) throws MultiMergeOperationException {
         MergeResult result = new MergeResult();
         for (String targetBranch : targetBranches) {
             indicator.setText(MessageBundle.message("progress.processing", targetBranch));
@@ -192,13 +197,9 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
                     new SyncBranchStep(gitOps),
                     new CheckUpToDateStep(gitOps),
                     new PerformMergeStep(gitOps),
-                    new PushBranchStep(gitOps)
+                    new PushBranchStep(gitOps, false)
             };
-            for (MergeStep step : steps) {
-                if (!step.execute(context)) {
-                    break;
-                }
-            }
+            executeSteps(steps, context, targetBranch, originalBranch);
             result.allSuccessfulMerges.addAll(context.successfulMerges);
             result.allFailedMerges.addAll(context.failedMerges);
             if (!context.allSuccessful) {
@@ -206,6 +207,44 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
             }
         }
         return result;
+    }
+
+    private void executeSteps(MergeStep[] steps, MergeContext context, String targetBranch, String originalBranch)
+            throws MultiMergeOperationException {
+        stepsLoop: for (MergeStep step : steps) {
+            StepResult stepResult = step.execute(context);
+            switch (stepResult) {
+                case SUCCESS -> {
+                    // Contínua para o próximo 'step'
+                }
+                case SKIPPED -> {
+                    // Interrompe o loop de steps, mas continua para a próxima target
+                    break stepsLoop;
+                }
+                case CONFLICT -> {
+                    boolean resolved = new MergeConflictResolutionStep(gitOps).execute(context);
+                    if (!resolved) {
+                        // Não resolvido, chama failure e interrompe 'step'
+                        step.failure(context);
+                        NotificationHelper.notifyError(project,
+                                NotificationHelper.DEFAULT_TITLE,
+                                MessageBundle.message("error.merge.conflict", targetBranch,
+                                        String.join("\n", context.errorMessage)));
+                        break stepsLoop;
+                    }
+
+                    // Conflito resolvido, continua para o próximo 'step'
+                    step.success(context);
+                }
+                case FAILURE -> {
+                    handleReturnToOriginalBranch(context.repository, context.sourceBranch, originalBranch,
+                            context.squash, context.pushAfterMerge,
+                            context.deleteSourceBranch, context.commitMessage, context.indicator);
+                    throw new MultiMergeOperationException(MessageBundle.message("error.execute.step",
+                            step.getClass().getSimpleName(), context.errorMessage));
+                }
+            }
+        }
     }
 
     /** Retorna para a branch original, se necessário. */
@@ -223,9 +262,10 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
         new ReturnToOriginalBranchStep(gitOps, originalBranch).execute(
                 new MergeContext(project, repository, sourceBranch, originalBranch, squash, pushAfterMerge,
                         deleteSourceBranch, commitMessage, indicator));
+
     }
 
-    /** Deleta a branch source, se necessário. */
+    /** Delete a branch source, se necessário. */
     private boolean handleDeleteSourceBranch(
             GitRepository repository,
             String sourceBranch,
@@ -242,14 +282,16 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
                         true, commitMessage, indicator));
     }
 
-    /** Executa fetch --all se houve push ou deleção. */
+    /** Executa fetch --all se houve push ou branch removida. */
     private void handleFetchIfNeeded(GitRepository repository, boolean pushAfterMerge, boolean anyDelete) {
         if (pushAfterMerge || anyDelete) {
             gitOps.fetchAll(repository, anyDelete);
+            // Atualiza o ChangeListManager ao final do fluxo
+            UpdateChangeListManagerStep.update(project);
         }
     }
 
-    /** Notifica o resumo das operações ao usuário. */
+    /** Notifica o resumo das operações ao utilizador. */
     private void notifySummary(List<String> allSuccessfulMerges, List<String> allFailedMerges, boolean allSuccessful) {
         StringBuilder summary = new StringBuilder();
         if (!allSuccessfulMerges.isEmpty()) {
@@ -286,17 +328,17 @@ public final class GitMultiMergeServiceImpl implements GitMultiMergeService {
     }
 
     /**
-     * Verifica se há alterações não commitadas no working directory.
+     * Verifica se há alterações não enviadas no working directory.
      *
      * @param repository Repositório Git alvo.
-     * @return true se existem alterações não commitadas, false se o working
+     * @return true se existem alterações não enviadas, false se o working
      *         directory está limpo.
      */
     @Override
     public boolean hasUncommittedChanges(@NotNull GitRepository repository) {
         ChangeListManager changeListManager = ChangeListManager.getInstance(project);
         VirtualFile root = repository.getRoot();
-        // Verifica se há arquivos modificados, staged ou não, no repositório
+        // Verifica se há arquivos modificados, staged ou não, no repositório.
         return changeListManager.getAffectedFiles().stream()
                 .anyMatch(file -> file.getPath().startsWith(root.getPath()));
     }

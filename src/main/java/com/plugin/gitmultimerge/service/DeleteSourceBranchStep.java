@@ -1,7 +1,6 @@
 package com.plugin.gitmultimerge.service;
 
 import com.plugin.gitmultimerge.service.interfaces.GitRepositoryOperations;
-import com.plugin.gitmultimerge.service.interfaces.MergeStep;
 import com.plugin.gitmultimerge.util.MessageBundle;
 import com.plugin.gitmultimerge.util.NotificationHelper;
 import git4idea.GitRemoteBranch;
@@ -9,9 +8,9 @@ import git4idea.commands.GitCommandResult;
 import git4idea.repo.GitRepositoryManager;
 
 /**
- * Etapa que deleta a branch source local e remota, se necessário.
+ * Etapa que delete a branch source local e remota, se necessário.
  */
-public class DeleteSourceBranchStep implements MergeStep {
+public class DeleteSourceBranchStep {
     private final GitRepositoryOperations service;
     private final String originalBranch;
 
@@ -26,10 +25,9 @@ public class DeleteSourceBranchStep implements MergeStep {
         this.originalBranch = originalBranch;
     }
 
-    @Override
     public boolean execute(MergeContext context) {
-        if (!context.deleteSourceBranch || !context.allSuccessful) {
-            return true; // Não precisa deletar
+        if (!(context.deleteSourceBranch && context.allSuccessful)) {
+            return true; // Não remover
         }
         if (originalBranch.equals(context.sourceBranch)) {
             // Tentar checkout automático para a target
@@ -48,28 +46,28 @@ public class DeleteSourceBranchStep implements MergeStep {
                         NotificationHelper.DEFAULT_TITLE,
                         MessageBundle.message("error.checkout.before.delete", context.targetBranch,
                                 context.sourceBranch));
-                return true;
+                return false;
             }
         }
-        assert context.sourceBranch != null;
         GitRemoteBranch remoteBranch = service.findRemoteBranch(context.repository, context.sourceBranch);
         GitCommandResult deleteResult = service.deleteBranch(context.repository, context.sourceBranch);
         if (!deleteResult.success()) {
-            NotificationHelper.notifyWarning(
-                    context.project,
-                    NotificationHelper.DEFAULT_TITLE,
-                    MessageBundle.message("error.delete.source", context.sourceBranch,
-                            String.join("\n", deleteResult.getErrorOutput())));
+            return notifyWarning(deleteResult, context, "error.delete.local");
         } else if (remoteBranch != null) {
             GitCommandResult deleteRemoteResult = service.deleteRemoteBranch(context.repository, remoteBranch);
             if (!deleteRemoteResult.success()) {
-                NotificationHelper.notifyWarning(
-                        context.project,
-                        NotificationHelper.DEFAULT_TITLE,
-                        MessageBundle.message("error.delete.remote", context.sourceBranch,
-                                String.join("\n", deleteRemoteResult.getErrorOutput())));
+                return notifyWarning(deleteRemoteResult, context, "error.delete.remote");
             }
         }
         return true;
+    }
+
+    private boolean notifyWarning(GitCommandResult result, MergeContext context, String key) {
+        NotificationHelper.notifyWarning(
+                context.project,
+                NotificationHelper.DEFAULT_TITLE,
+                MessageBundle.message(key, context.sourceBranch,
+                        String.join("\n", result.getErrorOutput())));
+        return false;
     }
 }

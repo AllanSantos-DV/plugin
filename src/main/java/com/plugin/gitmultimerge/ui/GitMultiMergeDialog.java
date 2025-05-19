@@ -148,7 +148,7 @@ public class GitMultiMergeDialog extends DialogWrapper {
     }
 
     /**
-     * Verifica se a branch source selecionada tem alterações não commitadas de
+     * Verifica se a branch source selecionada tenha alterações não enviadas de
      * forma assíncrona.
      * Esta abordagem evita bloquear a EDT.
      */
@@ -190,8 +190,8 @@ public class GitMultiMergeDialog extends DialogWrapper {
     }
 
     /**
-     * Verifica se há alterações não commitadas durante a operação de OK.
-     * Esta verificação é feita de forma síncrona pois o usuário já está aguardando.
+     * Verifica se há alterações não enviadas durante a operação de OK.
+     * Esta verificação é feita de forma síncrona, pois o utilizador já está a aguardar.
      */
     @Override
     protected void doOKAction() {

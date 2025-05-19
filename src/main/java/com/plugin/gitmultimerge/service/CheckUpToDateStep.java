@@ -21,9 +21,9 @@ public class CheckUpToDateStep implements MergeStep {
     }
 
     @Override
-    public boolean execute(MergeContext context) {
-        assert context.sourceBranch != null;
-        boolean branchAlreadyUpToDate = !service.hasPendingChanges(context.repository, context.sourceBranch);
+    public StepResult execute(MergeContext context) {
+        boolean branchAlreadyUpToDate = service.isTargetUpToDateWithSource(
+                context.repository, context.targetBranch, context.sourceBranch);
         if (branchAlreadyUpToDate) {
             NotificationHelper.notifyInfo(
                     context.project,
@@ -31,8 +31,19 @@ public class CheckUpToDateStep implements MergeStep {
                     MessageBundle.message("notification.already.up.to.date", context.targetBranch,
                             context.sourceBranch));
             context.successfulMerges.add(context.targetBranch);
-            return false; // Interrompe o fluxo para esta branch
+            return StepResult.SKIPPED; // Interrompe o fluxo para esta branch, mas não é erro crítico.
         }
-        return true;
+        return StepResult.SUCCESS;
+    }
+
+    @Override
+    public StepResult failure(MergeContext context) {
+        // Não há falha nesta etapa, apenas retorna sucesso.
+        return StepResult.SKIPPED;
+    }
+
+    @Override
+    public void success(MergeContext context) {
+        // Não há ações específicas a serem realizadas em caso de sucesso nesta etapa.
     }
 }

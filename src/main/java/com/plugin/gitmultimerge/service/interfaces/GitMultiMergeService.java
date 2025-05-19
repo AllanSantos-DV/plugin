@@ -29,7 +29,7 @@ public interface GitMultiMergeService {
      * @param targetBranches     Lista de branches target.
      * @param squash             Se true, faz squash dos commits.
      * @param pushAfterMerge     Se true, faz push após cada merge.
-     * @param deleteSourceBranch Se true, deleta a branch source após merges
+     * @param deleteSourceBranch Se true, remove a branch source após merges
      *                           bem-sucedidos.
      * @param commitMessage      Mensagem de commit para squash.
      * @param indicator          Indicador de progresso.
@@ -46,10 +46,10 @@ public interface GitMultiMergeService {
             ProgressIndicator indicator);
 
     /**
-     * Verifica se há alterações não commitadas no working directory.
+     * Verifica se há alterações não enviadas no working directory.
      *
      * @param repository Repositório Git alvo.
-     * @return true se existem alterações não commitadas, false se o working
+     * @return true se existem alterações não enviadas, false se o working
      *         directory está limpo.
      */
     boolean hasUncommittedChanges(@NotNull GitRepository repository);

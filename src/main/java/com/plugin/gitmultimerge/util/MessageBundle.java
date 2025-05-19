@@ -45,7 +45,7 @@ public final class MessageBundle {
             return bundle.getString(key);
         } catch (MissingResourceException e) {
             try {
-                // Tentar com o bundle padrão se não encontrar no bundle específico
+                // Tentar com o bundle padrão se não encontrar no bundle específico.
                 ResourceBundle defaultBundle = ResourceBundle.getBundle(BUNDLE, Locale.ROOT);
                 return defaultBundle.getString(key);
             } catch (MissingResourceException ex) {

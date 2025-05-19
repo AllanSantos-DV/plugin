@@ -3,7 +3,6 @@ package com.plugin.gitmultimerge.service;
 import com.plugin.gitmultimerge.service.interfaces.GitRepositoryOperations;
 import com.plugin.gitmultimerge.service.interfaces.MergeStep;
 import com.plugin.gitmultimerge.util.MessageBundle;
-import com.plugin.gitmultimerge.util.NotificationHelper;
 import git4idea.commands.GitCommandResult;
 
 /**
@@ -22,24 +21,32 @@ public class PerformMergeStep implements MergeStep {
     }
 
     @Override
-    public boolean execute(MergeContext context) {
-        assert context.sourceBranch != null;
+    public StepResult execute(MergeContext context) {
         GitCommandResult mergeResult = service.merge(
                 context.repository,
                 context.sourceBranch,
                 context.squash,
                 context.commitMessage);
-        if (!mergeResult.success()) {
-            NotificationHelper.notifyError(
-                    context.project,
-                    NotificationHelper.DEFAULT_TITLE,
-                    MessageBundle.message("error.merge", context.sourceBranch, context.targetBranch,
-                            String.join("\n", mergeResult.getErrorOutput())));
-            context.allSuccessful = false;
-            context.failedMerges.add(context.targetBranch);
-            return false;
+        if (mergeResult.success()) {
+            context.successfulMerges.add(context.targetBranch);
+            return StepResult.SUCCESS;
         }
+
+        context.errorMessage = MessageBundle.message("error.merge", context.sourceBranch, context.targetBranch,
+                String.join("\n", mergeResult.getErrorOutput()));
+
+        return new ResultFailStep(mergeResult, context.errorMessage).checkConflict(context);
+    }
+
+    @Override
+    public StepResult failure(MergeContext context) {
+        context.allSuccessful = false;
+        context.failedMerges.add(context.targetBranch);
+        return StepResult.SKIPPED;
+    }
+
+    @Override
+    public void success(MergeContext context) {
         context.successfulMerges.add(context.targetBranch);
-        return true;
     }
 }

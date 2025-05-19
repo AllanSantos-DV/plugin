@@ -3,7 +3,6 @@ package com.plugin.gitmultimerge.service;
 import com.plugin.gitmultimerge.service.interfaces.GitRepositoryOperations;
 import com.plugin.gitmultimerge.service.interfaces.MergeStep;
 import com.plugin.gitmultimerge.util.MessageBundle;
-import com.plugin.gitmultimerge.util.NotificationHelper;
 import git4idea.commands.GitCommandResult;
 
 /**
@@ -22,18 +21,29 @@ public class CheckoutBranchStep implements MergeStep {
     }
 
     @Override
-    public boolean execute(MergeContext context) {
-        GitCommandResult checkoutResult = service.checkout(context.repository, context.targetBranch);
-        if (!checkoutResult.success()) {
-            NotificationHelper.notifyError(
-                    context.project,
-                    NotificationHelper.DEFAULT_TITLE,
-                    MessageBundle.message("error.checkout", context.targetBranch,
-                            String.join("\n", checkoutResult.getErrorOutput())));
-            context.allSuccessful = false;
-            context.failedMerges.add(context.targetBranch);
-            return false;
+    public StepResult execute(MergeContext context) {
+        if (context.atualBranch != null && context.atualBranch.equals(context.targetBranch)) {
+            return StepResult.SUCCESS;
         }
-        return true;
+        GitCommandResult checkoutResult = service.checkout(context.repository, context.targetBranch);
+        if (checkoutResult.success()) {
+            return StepResult.SUCCESS;
+        }
+
+        context.errorMessage = MessageBundle.message("error.checkout", context.targetBranch,
+                String.join("\n", checkoutResult.getErrorOutput()));
+        return new ResultFailStep(checkoutResult, context.errorMessage).checkConflict(context);
+    }
+
+    @Override
+    public StepResult failure(MergeContext context) {
+        context.allSuccessful = false;
+        context.failedMerges.add(context.targetBranch);
+        return StepResult.SKIPPED;
+    }
+
+    @Override
+    public void success(MergeContext context) {
+        // Não há ações específicas a serem realizadas em caso de sucesso nesta etapa.
     }
 }

@@ -4,7 +4,7 @@ import com.plugin.gitmultimerge.service.interfaces.GitRepositoryOperations;
 import com.plugin.gitmultimerge.service.interfaces.MergeStep;
 import git4idea.GitRemoteBranch;
 
-public class SyncBranchStep implements MergeStep{
+public class SyncBranchStep implements MergeStep {
     private final GitRepositoryOperations service;
 
     /**
@@ -17,18 +17,25 @@ public class SyncBranchStep implements MergeStep{
     }
 
     @Override
-    public boolean execute(MergeContext context) {
-        // Verifica se o push após o merge está habilitado
-        if (!context.pushAfterMerge) {
-            return true;
-        }
-        // Verifica se a branch remota já existe
+    public StepResult execute(MergeContext context) {
+        // Verifica se a branch remota já existe.
         GitRemoteBranch remoteBranch = service.findRemoteBranch(context.repository, context.targetBranch);
         boolean needsSetUpStream = remoteBranch == null;
 
-        // Se a branch remota não existe, executa o push com setUpStream
-        // Se a branch remota existe, executa o pull para garantir que a branch local esteja atualizada
-        if (needsSetUpStream) return new PushBranchStep(service).execute(context);
+        if (context.pushAfterMerge && needsSetUpStream){
+            return new PushBranchStep(service, true).execute(context);
+        }
         return new PullBranchStep(service).execute(context);
+    }
+
+    @Override
+    public StepResult failure(MergeContext context) {
+        context.allSuccessful = false;
+        return StepResult.SKIPPED;
+    }
+
+    @Override
+    public void success(MergeContext context) {
+        // Não há ações específicas a serem realizadas em caso de sucesso nesta etapa.
     }
 }
